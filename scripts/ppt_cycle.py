@@ -354,15 +354,14 @@ def build_focus_prompt(ep: dict) -> str:
     ep_id = ep["id"]
     return (
         f"标识 ep-{ep_id:02d}。"
-        f"围绕第 {ep_id} 集《{ep['titleZh']}》（{ep['titleEn']}）制作简体中文详细学习幻灯片，严格控制在恰好 15 页（15 张幻灯片）："
-        "第 1 页为手绘海报风封面；第 2-4 页交代本课时代背景与核心发问；"
+        f"请为伯恩斯坦《青少年音乐会》第 {ep_id} 集《{ep['titleZh']}》制作一套全简体中文的详细学习幻灯片，严格控制在恰好 15 页："
+        "第 1 页为手绘海报风封面；第 2-4 页交代时代背景与核心发问；"
         "第 5-11 页逐层拆解核心乐理概念与伯恩斯坦现场对照实验；"
         "第 12-13 页提炼关键音乐片段的听辨线索；"
-        "第 14 页按来路梳理本课演奏曲目表；第 15 页给出全课收获总结。"
-        "视觉严格采用《丁丁历险记》清线漫画（Ligne Claire）风格：黑色清晰轮廓、鲜明平涂色块、"
-        "还原纽约卡内基音乐厅或林肯中心舞台、钢琴与乐队群像，配简练精准的中文解说短句。"
-        "严格只使用所选来源中的事实、人名、日期、乐曲与引语，绝不虚构或混入其它集数内容；"
-        "不要把文件名或标识编号写进幻灯片标题。"
+        "第 14 页整理本课演奏曲目表；第 15 页给出全课收获总结。"
+        "全片所有呈现文字必须百分百使用纯正流畅的简体中文：包括封面主副标题、每页大标题、小标题、正文讲解、图表标签、漫画气泡、作曲家姓名、曲目名称及乐理术语注释，一律译为简体中文，禁止保留英文标题、英文句子或中英双语混排。"
+        "画面采用《丁丁历险记》清线漫画风格，黑色清晰轮廓配鲜明平涂色块，还原纽约卡内基音乐厅或林肯中心舞台、钢琴与乐队群像。"
+        "严格只依据所选来源中的事实、人物、日期、乐曲与原话，绝不虚构或混入其它集数；不要把文件名或标识编号写进幻灯片标题。"
     )
 
 
@@ -605,8 +604,18 @@ def submit_eligible(episodes_by_id: dict[int, dict], max_new: int, remaining_new
             continue
         candidates.append(rec)
 
-    # Starvation-prevention: lowest daily fail count first, then episode order.
-    candidates.sort(key=lambda r: (r.get("failed_today", 0), r["id"]))
+    # Starvation-prevention: lowest daily fail count first, interleaved across accounts.
+    by_profile = {}
+    for r in sorted(candidates, key=lambda r: (r.get("failed_today", 0), r["id"])):
+        by_profile.setdefault(r["profile"], []).append(r)
+    interleaved = []
+    max_len = max((len(v) for v in by_profile.values()), default=0)
+    for idx in range(max_len):
+        for prof in ("account-b", "default"):
+            items = by_profile.get(prof, [])
+            if idx < len(items):
+                interleaved.append(items[idx])
+    candidates = interleaved
 
     submitted = 0
     for rec in candidates:
