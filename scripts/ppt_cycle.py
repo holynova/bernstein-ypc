@@ -19,6 +19,7 @@ from pypdf import PdfReader
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 VENV_PY = ROOT / ".venv/bin/python"
+NLM_PY = pathlib.Path("/Users/sym/.local/share/uv/tools/notebooklm-mcp-cli/bin/python3")
 NLM_ONCE = ROOT / "scripts/nlm_once.py"
 OPTIMIZE_PY = ROOT / "scripts/optimize_slides.py"
 BUILD_SLIDES_PY = ROOT / "scripts/build_slides.py"
@@ -134,7 +135,7 @@ def pace_cli():
 def run_nlm_json(args: list[str], profile: str, timeout: int = 120):
     """Execute nlm via non-retrying nlm_once.py wrapper and parse JSON."""
     pace_cli()
-    cmd = [str(NLM_ONCE), *args]
+    cmd = [str(NLM_PY), str(NLM_ONCE), *args]
     if "--profile" not in cmd:
         cmd.extend(["--profile", profile])
     res = subprocess.run(
