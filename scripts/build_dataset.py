@@ -415,13 +415,20 @@ def _score_itunes_candidate(composer, piece, clean_piece, res):
     cname = (res.get("collectionName") or "").lower()
     combined = f"{tname} {aname} {cname}"
 
-    # Reject covers, karaoke, piano reductions (unless piece is piano/solo), ringtones
-    junk_terms = ("karaoke", "tribute", "ringtone", "music box", "lullaby", "8-bit", "midi")
+    # Reject covers, karaoke, ambient rain noise, piano reductions (unless piece is piano/solo), ringtones
+    junk_terms = ("karaoke", "tribute", "ringtone", "music box", "lullaby", "8-bit", "midi", "waterdrip", "white noise", "sleep", "asmr", "(rain")
     if any(j in combined for j in junk_terms):
         return -100
     if "piano version" in combined or "piano transcription" in combined:
         if "piano" not in piece.lower() and "piano" not in composer.lower():
             return -100
+    if "piano original" in piece.lower():
+        if any(x in combined for x in ("orchestrated by", "philharmonic", "symphony orchestra")):
+            return -100
+    if "for cello" in piece.lower() and "for violin" in tname and "cello" not in tname:
+        return -100
+    if "prelude" in piece.lower() and any(x in combined for x in ("closing trio", "act iii")):
+        return -100
 
     comp_lower = composer.lower()
     comp_last = composer.split()[-1].lower()

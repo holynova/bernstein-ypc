@@ -24,6 +24,10 @@ for (const ep of raw.episodes) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(ep.date)) {
     throw new Error(`Invalid date format in episode ${ep.id}: ${ep.date}`);
   }
+  const textFields = [ep.concepts, ep.thesis, ep.plain, ...(ep.scenes || [])];
+  if (textFields.some((s) => /\*\*/.test(String(s || "")))) {
+    throw new Error(`Raw markdown ** marker leaked in episode ${ep.id}`);
+  }
   if (ep.bilibili) {
     biliCount++;
     if (!/^https:\/\/www\.bilibili\.com\/video\/BV[0-9A-Za-z]+$/.test(ep.bilibili.url)) {

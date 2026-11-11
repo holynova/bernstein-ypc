@@ -1,48 +1,69 @@
 import "./styles/base.css";
-import "./styles/proto-a.css";
-import "./styles/proto-b.css";
 import "./styles/proto-c.css";
 
 import dataset from "./data/episodes.json";
 import { getAudioState, stopPreview, subscribeAudio, togglePreview } from "./audio.js";
 import {
+  formatCountLabel,
   renderAudioDock,
-  renderPrototypeA,
-  renderPrototypeB,
-  renderPrototypeC,
+  renderDirItems,
+  renderPrototypeCShell,
+  renderStageContent,
   renderTopBar,
 } from "./render.js";
 
-function readInitialProto() {
+function readInitialEpId() {
   const params = new URLSearchParams(window.location.search);
-  const qp = params.get("proto");
-  if (qp === "a" || qp === "b" || qp === "c") return qp;
-  const hash = window.location.hash.replace("#", "").toLowerCase();
-  if (hash === "a" || hash === "b" || hash === "c") return hash;
-  return "a";
+  const qp = Number(params.get("ep"));
+  if (qp && dataset.episodes.some((e) => e.id === qp)) return qp;
+  const match = window.location.hash.match(/^#ep-(\d+)$/i);
+  if (match) {
+    const id = Number(match[1]);
+    if (dataset.episodes.some((e) => e.id === id)) return id;
+  }
+  return dataset.episodes[0]?.id ?? 1;
 }
 
 const state = {
-  proto: readInitialProto(),
   category: "全部",
   query: "",
-  activeId: dataset.episodes[0]?.id ?? 1,
+  isComposing: false,
+  activeId: readInitialEpId(),
   audioState: getAudioState(),
 };
 
 const app = document.getElementById("app");
-const showToolbar = dataset.episodes.length > 5;
+const indexedText = new Map(
+  dataset.episodes.map((ep) => {
+    const repText = (ep.repertoire || [])
+      .map((t) => `${t.composer} ${t.piece} ${t.titleZh} ${t.recordingArtist || ""}`)
+      .join(" ");
+    const blob = [
+      ep.id,
+      `第${ep.id}集`,
+      ep.date,
+      ep.titleZh,
+      ep.titleEn,
+      ep.category,
+      ep.concepts,
+      ep.thesis,
+      ep.plain,
+      ...(ep.scenes || []),
+      repText,
+    ]
+      .join(" ")
+      .toLowerCase();
+    return [ep.id, blob];
+  })
+);
 
 function filterEpisodes() {
-  const q = state.query.trim().toLowerCase();
+  const terms = state.query.trim().toLowerCase().split(/\s+/).filter(Boolean);
   return dataset.episodes.filter((ep) => {
     if (state.category !== "全部" && ep.category !== state.category) return false;
-    if (!q) return true;
-    const repText = (ep.repertoire || [])
-      .map((t) => `${t.composer} ${t.piece} ${t.titleZh}`)
-      .join(" ");
-    const haystack = `${ep.id} ${ep.titleZh} ${ep.titleEn} ${ep.concepts} ${ep.thesis} ${ep.plain} ${repText}`.toLowerCase();
-    return haystack.includes(q);
+    if (!terms.length) return true;
+    const blob = indexedText.get(ep.id) || "";
+    return terms.every((t) => blob.includes(t));
   });
 }
 
@@ -66,85 +87,87 @@ function updateAudioButtons() {
   }
 }
 
-function render(preserveSearchFocus = false) {
-  document.body.setAttribute("data-proto", state.proto);
+function syncView({ scrollStage = false, scrollDir = false } = {}) {
   const filtered = filterEpisodes();
-
-  let mainHtml = "";
-  if (state.proto === "a") {
-    mainHtml = renderPrototypeA({
-      episodes: filtered,
-      category: state.category,
-      query: state.query,
-      showToolbar,
-      audioState: state.audioState,
-    });
-  } else if (state.proto === "b") {
-    mainHtml = renderPrototypeB({
-      episodes: filtered,
-      category: state.category,
-      query: state.query,
-      showToolbar,
-      audioState: state.audioState,
-    });
-  } else {
-    mainHtml = renderPrototypeC({
-      episodes: filtered,
-      allEpisodes: dataset.episodes,
-      category: state.category,
-      query: state.query,
-      showToolbar,
-      activeId: state.activeId,
-      audioState: state.audioState,
-    });
+  if (filtered.length && !filtered.some((e) => e.id === state.activeId)) {
+    state.activeId = filtered[0].id;
   }
 
-  const appVersion = typeof __APP_VERSION__ !== "undefined" ? __APP_VERSION__ : "1.0.0";
-  const footerHtml = `
-      <footer class="site-footer">
-        <span>讲稿依据 Leonard Bernstein 官方脚本 · 纽约爱乐档案核验</span>
-        <span>v${appVersion} · B站 <a class="script-link" href="${dataset.bilibiliCollectionUrl}" target="_blank" rel="noopener">掘火档案（掘火中译）</a></span>
-      </footer>
-    `;
+  const countEl = document.getElementById("site-count");
+  if (countEl) {
+    countEl.textContent = formatCountLabel(filtered.length, dataset.episodes.length);
+  }
 
-  app.innerHTML = `
-    ${renderTopBar({
-      proto: state.proto,
-      collectionUrl: dataset.bilibiliCollectionUrl,
-      totalCount: dataset.episodes.length,
-    })}
-    ${mainHtml}
-    ${footerHtml}
-    ${renderAudioDock(state.audioState)}
-  `;
+  const clearBtn = app.querySelector("[data-clear-search]");
+  if (clearBtn) {
+    clearBtn.hidden = !state.query;
+  }
 
-  if (preserveSearchFocus) {
-    const input = app.querySelector(".search-input");
-    if (input) {
-      input.focus();
-      const len = input.value.length;
-      input.setSelectionRange(len, len);
+  app.querySelectorAll("[data-category]").forEach((btn) => {
+    btn.setAttribute("aria-pressed", btn.dataset.category === state.category ? "true" : "false");
+  });
+
+  const dirList = document.getElementById("proto-c-dir-list");
+  if (dirList) {
+    dirList.innerHTML = renderDirItems(filtered, state.activeId);
+    if (scrollDir) {
+      const currentItem = dirList.querySelector('[aria-current="true"]');
+      if (currentItem) currentItem.scrollIntoView({ block: "nearest" });
+    }
+  }
+
+  const stage = document.getElementById("proto-c-stage");
+  if (stage) {
+    stage.innerHTML = renderStageContent(filtered, dataset.episodes, state.activeId, state.audioState);
+    if (scrollStage && window.innerWidth <= 920) {
+      stage.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   }
 }
 
-app.addEventListener("click", (e) => {
-  const protoBtn = e.target.closest("[data-set-proto]");
-  if (protoBtn) {
-    const next = protoBtn.dataset.setProto;
-    if (next && next !== state.proto) {
-      state.proto = next;
-      history.replaceState(null, "", `#${next}`);
-      window.scrollTo({ top: 0, behavior: "instant" });
-      render();
-    }
-    return;
-  }
+function mountApp() {
+  document.body.setAttribute("data-proto", "c");
+  const filtered = filterEpisodes();
+  const appVersion = typeof __APP_VERSION__ !== "undefined" ? __APP_VERSION__ : "v1.0.1";
 
+  app.innerHTML = `
+    ${renderTopBar({
+      collectionUrl: dataset.bilibiliCollectionUrl,
+      visibleCount: filtered.length,
+      totalCount: dataset.episodes.length,
+    })}
+    ${renderPrototypeCShell({
+      episodes: filtered,
+      allEpisodes: dataset.episodes,
+      category: state.category,
+      query: state.query,
+      activeId: state.activeId,
+      audioState: state.audioState,
+    })}
+    <footer class="site-footer">
+      <span>讲稿依据 Leonard Bernstein 官方脚本 · 纽约爱乐档案核验</span>
+      <span>${appVersion} · B站 <a class="script-link" href="${dataset.bilibiliCollectionUrl}" target="_blank" rel="noopener">掘火档案（掘火中译）</a></span>
+    </footer>
+    ${renderAudioDock(state.audioState)}
+  `;
+}
+
+app.addEventListener("click", (e) => {
   const catBtn = e.target.closest("[data-category]");
   if (catBtn) {
     state.category = catBtn.dataset.category;
-    render();
+    syncView();
+    return;
+  }
+
+  if (e.target.closest("[data-clear-search]")) {
+    state.query = "";
+    const input = app.querySelector(".search-input");
+    if (input) {
+      input.value = "";
+      input.focus();
+    }
+    syncView();
     return;
   }
 
@@ -153,11 +176,8 @@ app.addEventListener("click", (e) => {
     const nextId = Number(selectBtn.dataset.selectEp);
     if (nextId) {
       state.activeId = nextId;
-      render();
-      const stage = document.getElementById("proto-c-stage");
-      if (stage && window.innerWidth <= 920) {
-        stage.scrollIntoView({ behavior: "smooth", block: "start" });
-      }
+      history.replaceState(null, "", `#ep-${nextId}`);
+      syncView({ scrollStage: true, scrollDir: true });
     }
     return;
   }
@@ -186,24 +206,57 @@ app.addEventListener("click", (e) => {
   }
 });
 
-app.addEventListener("input", (e) => {
+app.addEventListener("compositionstart", (e) => {
   if (e.target.classList.contains("search-input")) {
+    state.isComposing = true;
+  }
+});
+
+app.addEventListener("compositionend", (e) => {
+  if (e.target.classList.contains("search-input")) {
+    state.isComposing = false;
     state.query = e.target.value;
-    render(true);
+    syncView();
+  }
+});
+
+app.addEventListener("input", (e) => {
+  if (e.target.classList.contains("search-input") && !state.isComposing) {
+    state.query = e.target.value;
+    syncView();
   }
 });
 
 window.addEventListener("hashchange", () => {
-  const next = window.location.hash.replace("#", "").toLowerCase();
-  if ((next === "a" || next === "b" || next === "c") && next !== state.proto) {
-    state.proto = next;
-    render();
+  const match = window.location.hash.match(/^#ep-(\d+)$/i);
+  if (match) {
+    const id = Number(match[1]);
+    if (dataset.episodes.some((ep) => ep.id === id) && id !== state.activeId) {
+      state.activeId = id;
+      syncView({ scrollDir: true });
+    }
   }
 });
 
 window.addEventListener("keydown", (e) => {
-  if (state.proto !== "c") return;
-  if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")) return;
+  const inInput = e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA");
+  if (e.key === "/" && !inInput && !e.metaKey && !e.ctrlKey) {
+    const input = app.querySelector(".search-input");
+    if (input) {
+      e.preventDefault();
+      input.focus();
+      input.select();
+    }
+    return;
+  }
+  if (e.key === "Escape" && state.query) {
+    state.query = "";
+    const input = app.querySelector(".search-input");
+    if (input) input.value = "";
+    syncView();
+    return;
+  }
+  if (inInput) return;
   if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
   const filtered = filterEpisodes();
   const idx = filtered.findIndex((ep) => ep.id === state.activeId);
@@ -212,7 +265,8 @@ window.addEventListener("keydown", (e) => {
   if (nextIdx >= 0 && nextIdx < filtered.length) {
     e.preventDefault();
     state.activeId = filtered[nextIdx].id;
-    render();
+    history.replaceState(null, "", `#ep-${state.activeId}`);
+    syncView({ scrollDir: true });
   }
 });
 
@@ -221,4 +275,4 @@ subscribeAudio((nextAudio) => {
   updateAudioButtons();
 });
 
-render();
+mountApp();
