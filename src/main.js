@@ -2,12 +2,14 @@ import "./styles/base.css";
 import "./styles/proto-c.css";
 
 import dataset from "./data/episodes.json";
+import slidesMap from "./data/slides.json";
 import { getAudioState, stopPreview, subscribeAudio, togglePreview } from "./audio.js";
 import {
   formatCountLabel,
   renderAudioDock,
   renderDirItems,
   renderPrototypeCShell,
+  renderSlideViewerShell,
   renderStageContent,
   renderTopBar,
 } from "./render.js";
@@ -109,7 +111,7 @@ function syncView({ scrollStage = false, scrollDir = false } = {}) {
 
   const dirList = document.getElementById("proto-c-dir-list");
   if (dirList) {
-    dirList.innerHTML = renderDirItems(filtered, state.activeId);
+    dirList.innerHTML = renderDirItems(filtered, state.activeId, slidesMap);
     if (scrollDir) {
       const currentItem = dirList.querySelector('[aria-current="true"]');
       if (currentItem) currentItem.scrollIntoView({ block: "nearest" });
@@ -118,11 +120,193 @@ function syncView({ scrollStage = false, scrollDir = false } = {}) {
 
   const stage = document.getElementById("proto-c-stage");
   if (stage) {
-    stage.innerHTML = renderStageContent(filtered, dataset.episodes, state.activeId, state.audioState);
+    stage.innerHTML = renderStageContent(
+      filtered,
+      dataset.episodes,
+      state.activeId,
+      state.audioState,
+      slidesMap
+    );
     if (scrollStage && window.innerWidth <= 920) {
       stage.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   }
+}
+
+const SLIDE_PRELOAD_MAX = 45;
+const slidePreloadMap = new Map();
+const slideViewerState = {
+  open: false,
+  epId: null,
+  page: 1,
+  renderToken: 0,
+  touchStartX: 0,
+  touchStartY: 0,
+};
+
+function preloadSlideImg(url) {
+  if (!url || slidePreloadMap.has(url)) return slidePreloadMap.get(url) || null;
+  if (slidePreloadMap.size >= SLIDE_PRELOAD_MAX) {
+    const oldestKey = slidePreloadMap.keys().next().value;
+    slidePreloadMap.delete(oldestKey);
+  }
+  const im = new Image();
+  im.decoding = "async";
+  im.src = url;
+  const ready =
+    typeof im.decode === "function"
+      ? im.decode().catch(() => {})
+      : new Promise((resolve) => {
+          if (im.complete) return resolve();
+          im.onload = () => resolve();
+          im.onerror = () => resolve();
+        });
+  slidePreloadMap.set(url, ready);
+  return ready;
+}
+
+function getNextReadyEpisode(epId) {
+  const idx = dataset.episodes.findIndex((e) => e.id === epId);
+  for (let i = idx + 1; i < dataset.episodes.length; i++) {
+    const cand = dataset.episodes[i];
+    if (slidesMap[String(cand.id)]) return cand;
+  }
+  return null;
+}
+
+function syncSlideFullscreenLabel() {
+  const viewer = document.getElementById("slide-viewer");
+  const fsBtn = document.getElementById("slide-fs-btn");
+  if (!viewer || !fsBtn) return;
+  const isFs = Boolean(document.fullscreenElement === viewer || viewer.classList.contains("is-fullscreen"));
+  fsBtn.textContent = isFs ? "退出全屏" : "全屏";
+}
+
+function toggleSlideFullscreen() {
+  const viewer = document.getElementById("slide-viewer");
+  if (!viewer) return;
+  if (document.fullscreenElement === viewer) {
+    document.exitFullscreen?.().catch(() => {});
+    viewer.classList.remove("is-fullscreen");
+    syncSlideFullscreenLabel();
+    return;
+  }
+  if (viewer.classList.contains("is-fullscreen")) {
+    viewer.classList.remove("is-fullscreen");
+    syncSlideFullscreenLabel();
+    return;
+  }
+  if (typeof viewer.requestFullscreen === "function") {
+    viewer
+      .requestFullscreen()
+      .then(() => {
+        viewer.classList.add("is-fullscreen");
+        syncSlideFullscreenLabel();
+      })
+      .catch(() => {
+        viewer.classList.add("is-fullscreen");
+        syncSlideFullscreenLabel();
+      });
+  } else {
+    viewer.classList.add("is-fullscreen");
+    syncSlideFullscreenLabel();
+  }
+}
+
+function showSlidePage(page) {
+  const ep = dataset.episodes.find((e) => e.id === slideViewerState.epId);
+  const meta = slidesMap[String(slideViewerState.epId)];
+  const viewer = document.getElementById("slide-viewer");
+  const img = document.getElementById("slide-img");
+  const badge = document.getElementById("slide-page-badge");
+  const endEl = document.getElementById("slide-end");
+  const endTitle = document.getElementById("slide-end-title");
+  const nextEpBtn = document.getElementById("slide-next-ep-btn");
+  if (!ep || !meta || !viewer || !img || !badge || !endEl) return;
+
+  const total = meta.pages;
+  const clamped = Math.max(1, Math.min(page, total + 1));
+  slideViewerState.page = clamped;
+
+  if (clamped > total) {
+    img.hidden = true;
+    endEl.hidden = false;
+    badge.textContent = `${total} / ${total}`;
+    if (endTitle) endTitle.textContent = `第 ${ep.id} 集 · ${ep.titleZh}（共 ${total} 页）`;
+    const nextReady = getNextReadyEpisode(ep.id);
+    if (nextEpBtn) {
+      if (nextReady) {
+        nextEpBtn.hidden = false;
+        nextEpBtn.dataset.slideNextEp = String(nextReady.id);
+        nextEpBtn.textContent = `下一课图解：第 ${nextReady.id} 集 →`;
+      } else {
+        nextEpBtn.hidden = true;
+      }
+    }
+    return;
+  }
+
+  endEl.hidden = true;
+  img.hidden = false;
+  badge.textContent = `${clamped} / ${total}`;
+  img.alt = `第 ${ep.id} 集《${ep.titleZh}》图解幻灯片第 ${clamped} 页`;
+
+  const url = `${meta.prefix}${clamped}.webp`;
+  const token = ++slideViewerState.renderToken;
+  const ready = preloadSlideImg(url);
+  if (clamped + 1 <= total) preloadSlideImg(`${meta.prefix}${clamped + 1}.webp`);
+  if (clamped + 2 <= total) preloadSlideImg(`${meta.prefix}${clamped + 2}.webp`);
+
+  const applySrc = () => {
+    if (token !== slideViewerState.renderToken) return;
+    img.src = url;
+  };
+  if (ready && typeof ready.then === "function") {
+    ready.then(applySrc);
+  } else {
+    applySrc();
+  }
+}
+
+function openSlideViewer(epId, page = 1) {
+  const ep = dataset.episodes.find((e) => e.id === epId);
+  const meta = slidesMap[String(epId)];
+  const viewer = document.getElementById("slide-viewer");
+  if (!ep || !meta || !viewer) return;
+
+  slideViewerState.open = true;
+  slideViewerState.epId = epId;
+
+  const titleEl = document.getElementById("slide-viewer-title");
+  if (titleEl) titleEl.textContent = `第 ${ep.id} 集 · ${ep.titleZh}`;
+
+  const pdfEl = document.getElementById("slide-pdf-link");
+  if (pdfEl) {
+    if (meta.pdfUrl) {
+      pdfEl.href = meta.pdfUrl;
+      pdfEl.download = `ep-${String(ep.id).padStart(2, "0")}.pdf`;
+      pdfEl.hidden = false;
+    } else {
+      pdfEl.hidden = true;
+    }
+  }
+
+  viewer.hidden = false;
+  document.documentElement.classList.add("slide-viewer-open");
+  showSlidePage(page);
+}
+
+function closeSlideViewer() {
+  const viewer = document.getElementById("slide-viewer");
+  if (!viewer) return;
+  if (document.fullscreenElement === viewer) {
+    document.exitFullscreen?.().catch(() => {});
+  }
+  viewer.classList.remove("is-fullscreen");
+  syncSlideFullscreenLabel();
+  viewer.hidden = true;
+  document.documentElement.classList.remove("slide-viewer-open");
+  slideViewerState.open = false;
 }
 
 function mountApp() {
@@ -143,16 +327,85 @@ function mountApp() {
       query: state.query,
       activeId: state.activeId,
       audioState: state.audioState,
+      slidesMap,
     })}
     <footer class="site-footer">
       <span>讲稿依据 Leonard Bernstein 官方脚本 · 纽约爱乐档案核验</span>
       <span>${appVersion} · B站 <a class="script-link" href="${dataset.bilibiliCollectionUrl}" target="_blank" rel="noopener">掘火档案（掘火中译）</a></span>
     </footer>
     ${renderAudioDock(state.audioState)}
+    ${renderSlideViewerShell()}
   `;
+
+  const canvas = document.getElementById("slide-canvas");
+  if (canvas) {
+    canvas.addEventListener(
+      "touchstart",
+      (e) => {
+        if (e.touches.length !== 1) return;
+        slideViewerState.touchStartX = e.touches[0].clientX;
+        slideViewerState.touchStartY = e.touches[0].clientY;
+      },
+      { passive: true }
+    );
+    canvas.addEventListener(
+      "touchend",
+      (e) => {
+        if (!slideViewerState.open || e.changedTouches.length !== 1) return;
+        const dx = e.changedTouches[0].clientX - slideViewerState.touchStartX;
+        const dy = e.changedTouches[0].clientY - slideViewerState.touchStartY;
+        if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
+          showSlidePage(slideViewerState.page + (dx < 0 ? 1 : -1));
+        }
+      },
+      { passive: true }
+    );
+  }
 }
 
 app.addEventListener("click", (e) => {
+  const openSlideBtn = e.target.closest("[data-open-slides]");
+  if (openSlideBtn) {
+    const epId = Number(openSlideBtn.dataset.openSlides);
+    const page = Number(openSlideBtn.dataset.slidePage || 1);
+    if (epId) openSlideViewer(epId, page);
+    return;
+  }
+
+  if (e.target.closest("[data-slide-close]")) {
+    closeSlideViewer();
+    return;
+  }
+
+  if (e.target.closest("[data-slide-fs]")) {
+    toggleSlideFullscreen();
+    return;
+  }
+
+  const slideDirBtn = e.target.closest("[data-slide-dir]");
+  if (slideDirBtn && slideViewerState.open) {
+    const dir = Number(slideDirBtn.dataset.slideDir);
+    if (dir) showSlidePage(slideViewerState.page + dir);
+    return;
+  }
+
+  if (e.target.closest("[data-slide-restart]") && slideViewerState.open) {
+    showSlidePage(1);
+    return;
+  }
+
+  const slideNextEpBtn = e.target.closest("[data-slide-next-ep]");
+  if (slideNextEpBtn) {
+    const nextId = Number(slideNextEpBtn.dataset.slideNextEp);
+    if (nextId) {
+      state.activeId = nextId;
+      history.replaceState(null, "", `#ep-${nextId}`);
+      syncView({ scrollStage: true, scrollDir: true });
+      openSlideViewer(nextId, 1);
+    }
+    return;
+  }
+
   const catBtn = e.target.closest("[data-category]");
   if (catBtn) {
     state.category = catBtn.dataset.category;
@@ -238,7 +491,48 @@ window.addEventListener("hashchange", () => {
   }
 });
 
+document.addEventListener("fullscreenchange", syncSlideFullscreenLabel);
+
 window.addEventListener("keydown", (e) => {
+  if (slideViewerState.open) {
+    const viewer = document.getElementById("slide-viewer");
+    if (e.key === "Escape") {
+      e.preventDefault();
+      if (viewer && (document.fullscreenElement === viewer || viewer.classList.contains("is-fullscreen"))) {
+        toggleSlideFullscreen();
+      } else {
+        closeSlideViewer();
+      }
+      return;
+    }
+    if (e.key === "ArrowLeft" || e.key === "PageUp") {
+      e.preventDefault();
+      showSlidePage(slideViewerState.page - 1);
+      return;
+    }
+    if (e.key === "ArrowRight" || e.key === "PageDown" || e.key === " ") {
+      e.preventDefault();
+      showSlidePage(slideViewerState.page + 1);
+      return;
+    }
+    if (e.key === "Home") {
+      e.preventDefault();
+      showSlidePage(1);
+      return;
+    }
+    if (e.key === "End") {
+      e.preventDefault();
+      const meta = slidesMap[String(slideViewerState.epId)];
+      if (meta) showSlidePage(meta.pages);
+      return;
+    }
+    if (e.key.toLowerCase() === "f" && !e.metaKey && !e.ctrlKey) {
+      e.preventDefault();
+      toggleSlideFullscreen();
+    }
+    return;
+  }
+
   const inInput = e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA");
   if (e.key === "/" && !inInput && !e.metaKey && !e.ctrlKey) {
     const input = app.querySelector(".search-input");

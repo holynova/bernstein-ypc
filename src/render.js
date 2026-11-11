@@ -68,7 +68,11 @@ export function renderSidebarToolbar({ category, query }) {
   `;
 }
 
-function renderActionLinks(ep) {
+function renderActionLinks(ep, slide) {
+  const slidesBtn = slide
+    ? `<button type="button" class="slide-trigger-btn" data-open-slides="${ep.id}" data-slide-page="1">图解 PPT · ${slide.pages} 页</button>`
+    : "";
+
   const bili = ep.bilibili
     ? `<a class="bili-link" href="${esc(ep.bilibili.url)}" target="_blank" rel="noopener" title="${esc(
         ep.bilibili.title
@@ -79,7 +83,38 @@ function renderActionLinks(ep) {
     ? `<a class="script-link" href="${esc(ep.scriptUrl)}" target="_blank" rel="noopener">英文讲稿 ↗</a>`
     : "";
 
-  return `<div class="ep-links">${bili}${script}</div>`;
+  return `<div class="ep-links">${slidesBtn}${bili}${script}</div>`;
+}
+
+function renderSlideStrip(ep, slide) {
+  if (!slide || !slide.prefix || !slide.pages) return "";
+  const coverSrc = `${slide.prefix}1.webp`;
+  const pdfLink = slide.pdfUrl
+    ? `<a class="script-link" href="${esc(slide.pdfUrl)}" target="_blank" rel="noopener" download="ep-${String(
+        ep.id
+      ).padStart(2, "0")}.pdf">下载 PDF ↗</a>`
+    : "";
+  return `
+    <section class="slide-strip" aria-label="课程图解幻灯片">
+      <button
+        type="button"
+        class="slide-cover-btn"
+        data-open-slides="${ep.id}"
+        data-slide-page="1"
+        aria-label="全屏阅读第 ${ep.id} 集图解幻灯片（共 ${slide.pages} 页）"
+      >
+        <img
+          class="slide-cover-img"
+          src="${esc(coverSrc)}"
+          alt="第 ${ep.id} 集《${esc(ep.titleZh)}》图解幻灯片第 1 页"
+          loading="lazy"
+          decoding="async"
+        />
+        <span class="slide-cover-badge tabular-nums">1 / ${slide.pages} · 全屏</span>
+      </button>
+      ${pdfLink ? `<div class="slide-strip-bar">${pdfLink}</div>` : ""}
+    </section>
+  `;
 }
 
 function renderRepertoire(ep, audioState) {
@@ -145,13 +180,14 @@ function renderLessonBody(ep) {
   `;
 }
 
-export function renderDirItems(episodes, activeId) {
+export function renderDirItems(episodes, activeId, slidesMap = {}) {
   if (!episodes.length) {
     return `<li class="empty-state">没有匹配的课程</li>`;
   }
   return episodes
-    .map(
-      (ep) => `
+    .map((ep) => {
+      const hasSlides = Boolean(slidesMap[String(ep.id)]);
+      return `
       <li>
         <button
           type="button"
@@ -161,15 +197,18 @@ export function renderDirItems(episodes, activeId) {
         >
           <span class="dir-num">${String(ep.id).padStart(2, "0")}</span>
           <span class="dir-title">${esc(ep.titleZh)}</span>
-          <span class="dir-year">${esc(ep.date.slice(0, 4))}</span>
+          <span class="dir-meta">
+            ${hasSlides ? `<span class="dir-slide-dot" title="含图解 PPT" aria-hidden="true"></span>` : ""}
+            <span class="dir-year">${esc(ep.date.slice(0, 4))}</span>
+          </span>
         </button>
       </li>
-    `
-    )
+    `;
+    })
     .join("");
 }
 
-export function renderStageContent(episodes, allEpisodes, activeId, audioState) {
+export function renderStageContent(episodes, allEpisodes, activeId, audioState, slidesMap = {}) {
   const active = episodes.find((e) => e.id === activeId) || episodes[0] || null;
   if (!active) {
     return `<div class="empty-state">没有找到符合条件的课程${
@@ -179,6 +218,7 @@ export function renderStageContent(episodes, allEpisodes, activeId, audioState) 
   const activeIdx = episodes.findIndex((e) => e.id === active.id);
   const prevEp = activeIdx > 0 ? episodes[activeIdx - 1] : null;
   const nextEp = activeIdx >= 0 && activeIdx < episodes.length - 1 ? episodes[activeIdx + 1] : null;
+  const slide = slidesMap[String(active.id)] || null;
 
   return `
     <div class="stage-top-row">
@@ -186,10 +226,11 @@ export function renderStageContent(episodes, allEpisodes, activeId, audioState) 
         <span class="stage-big-num">第 ${active.id} 集</span>
         <time datetime="${esc(active.date)}">${esc(active.dateZh)}</time>
       </div>
-      ${renderActionLinks(active)}
+      ${renderActionLinks(active, slide)}
     </div>
     <h2 class="stage-title-zh">${esc(active.titleZh)}</h2>
     <p class="stage-title-en">${esc(active.titleEn)}</p>
+    ${renderSlideStrip(active, slide)}
     ${renderLessonBody(active)}
     ${renderRepertoire(active, audioState)}
     <div class="stage-nav">
@@ -203,18 +244,61 @@ export function renderStageContent(episodes, allEpisodes, activeId, audioState) 
   `;
 }
 
-export function renderPrototypeCShell({ episodes, allEpisodes, category, query, activeId, audioState }) {
+export function renderPrototypeCShell({
+  episodes,
+  allEpisodes,
+  category,
+  query,
+  activeId,
+  audioState,
+  slidesMap = {},
+}) {
   return `
     <div class="proto-c-shell">
       <aside class="proto-c-sidebar" aria-label="课程目录与搜索">
         ${renderSidebarToolbar({ category, query })}
         <ul class="proto-c-dir-list" id="proto-c-dir-list">
-          ${renderDirItems(episodes, activeId)}
+          ${renderDirItems(episodes, activeId, slidesMap)}
         </ul>
       </aside>
       <main class="proto-c-stage" id="proto-c-stage">
-        ${renderStageContent(episodes, allEpisodes, activeId, audioState)}
+        ${renderStageContent(episodes, allEpisodes, activeId, audioState, slidesMap)}
       </main>
+    </div>
+  `;
+}
+
+export function renderSlideViewerShell() {
+  return `
+    <div class="slide-viewer" id="slide-viewer" hidden role="dialog" aria-modal="true" aria-labelledby="slide-viewer-title">
+      <div class="slide-viewer-bar">
+        <div class="slide-viewer-title-wrap">
+          <strong class="slide-viewer-title" id="slide-viewer-title"></strong>
+        </div>
+        <div class="slide-viewer-controls">
+          <span class="slide-page-badge tabular-nums" id="slide-page-badge"></span>
+          <a class="slide-bar-btn" id="slide-pdf-link" target="_blank" rel="noopener" hidden>下载 PDF</a>
+          <button type="button" class="slide-bar-btn" id="slide-fs-btn" data-slide-fs aria-label="切换全屏">全屏</button>
+          <button type="button" class="slide-bar-btn is-close" data-slide-close aria-label="关闭图解阅读器">关闭</button>
+        </div>
+      </div>
+      <div class="slide-canvas" id="slide-canvas">
+        <button type="button" class="slide-zone is-prev" data-slide-dir="-1" aria-label="上一页">
+          <span class="slide-arrow" aria-hidden="true">‹</span>
+        </button>
+        <img id="slide-img" class="slide-img" alt="" decoding="async" />
+        <button type="button" class="slide-zone is-next" data-slide-dir="1" aria-label="下一页">
+          <span class="slide-arrow" aria-hidden="true">›</span>
+        </button>
+        <div class="slide-end" id="slide-end" hidden>
+          <p class="slide-end-title" id="slide-end-title"></p>
+          <div class="slide-end-actions">
+            <button type="button" class="slide-bar-btn" data-slide-restart>再看一遍</button>
+            <button type="button" class="slide-bar-btn is-primary" id="slide-next-ep-btn" data-slide-next-ep hidden></button>
+            <button type="button" class="slide-bar-btn" data-slide-close>返回课文</button>
+          </div>
+        </div>
+      </div>
     </div>
   `;
 }
