@@ -24,6 +24,21 @@
     "pdfUrl": "/bernstein-ypc/slides/ep-10.pdf",
     "pages": 15
   },
+  "17": {
+    "prefix": "/bernstein-ypc/static/71de5aa617119ea4/",
+    "pdfUrl": "/bernstein-ypc/slides/ep-17.pdf",
+    "pages": 15
+  },
+  "20": {
+    "prefix": "/bernstein-ypc/static/b4f49129814311fc/",
+    "pdfUrl": "/bernstein-ypc/slides/ep-20.pdf",
+    "pages": 15
+  },
+  "21": {
+    "prefix": "/bernstein-ypc/static/ad4a3006d6f7fec2/",
+    "pdfUrl": "/bernstein-ypc/slides/ep-21.pdf",
+    "pages": 15
+  },
   "28": {
     "prefix": "/bernstein-ypc/static/b754fa802197c520/",
     "pdfUrl": "/bernstein-ypc/slides/ep-28.pdf",
@@ -64,9 +79,39 @@
     "pdfUrl": "/bernstein-ypc/slides/ep-45.pdf",
     "pages": 15
   },
+  "46": {
+    "prefix": "/bernstein-ypc/static/fd36a144ee4ac82e/",
+    "pdfUrl": "/bernstein-ypc/slides/ep-46.pdf",
+    "pages": 15
+  },
+  "47": {
+    "prefix": "/bernstein-ypc/static/99df0bce991c6b1d/",
+    "pdfUrl": "/bernstein-ypc/slides/ep-47.pdf",
+    "pages": 15
+  },
+  "48": {
+    "prefix": "/bernstein-ypc/static/4cf5d8bfabca27df/",
+    "pdfUrl": "/bernstein-ypc/slides/ep-48.pdf",
+    "pages": 15
+  },
   "49": {
     "prefix": "/bernstein-ypc/static/b60cc1c00376a4ce/",
     "pdfUrl": "/bernstein-ypc/slides/ep-49.pdf",
+    "pages": 15
+  },
+  "50": {
+    "prefix": "/bernstein-ypc/static/cec50be1dc98232c/",
+    "pdfUrl": "/bernstein-ypc/slides/ep-50.pdf",
+    "pages": 15
+  },
+  "51": {
+    "prefix": "/bernstein-ypc/static/a039c683a99cc522/",
+    "pdfUrl": "/bernstein-ypc/slides/ep-51.pdf",
+    "pages": 15
+  },
+  "52": {
+    "prefix": "/bernstein-ypc/static/f2008b082df03791/",
+    "pdfUrl": "/bernstein-ypc/slides/ep-52.pdf",
     "pages": 15
   }
 }
