@@ -1,0 +1,131 @@
+/* 原型 A：纸本节目单列表（Archival Program Ledger） */
+body[data-proto="a"] {
+  --bg: #f6f2e9;
+  --surface: #fcfaf4;
+  --surface-alt: #ede8dc;
+  --bar-bg: rgba(246, 242, 233, 0.92);
+  --fg: #171614;
+  --fg-soft: #2c2a26;
+  --muted: #656056;
+  --border: #ddd6c7;
+  --accent: #a2231d;
+  --accent-contrast: #fcfaf4;
+  --bili-bg: rgba(162, 35, 29, 0.06);
+  --bili-border: rgba(162, 35, 29, 0.3);
+  --bili-fg: #a2231d;
+  --selection-bg: rgba(162, 35, 29, 0.16);
+  --container-max: 980px;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+.proto-a-main {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 36px 24px 56px;
+}
+
+.proto-a-head {
+  padding-bottom: 24px;
+  border-bottom: 2px solid var(--fg);
+  margin-bottom: 20px;
+}
+
+.proto-a-title {
+  margin: 0 0 18px;
+  font-family: var(--font-serif);
+  font-size: clamp(1.85rem, 3.6vw, 2.75rem);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.proto-a-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.ledger-row {
+  display: grid;
+  grid-template-columns: 128px minmax(0, 1fr);
+  gap: 8px 32px;
+  padding: 28px 0;
+  border-bottom: 1px solid var(--border);
+  align-items: start;
+}
+
+.ledger-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 4px;
+}
+
+.ledger-num {
+  font-family: var(--font-serif);
+  font-size: 1.85rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.ledger-date {
+  font-size: 0.84rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.ledger-cat {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.ledger-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px 16px;
+  margin-bottom: 12px;
+}
+
+.ledger-titles {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ledger-title-zh {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.ledger-title-en {
+  font-size: 0.9rem;
+  font-style: italic;
+  color: var(--muted);
+}
+
+@media (max-width: 720px) {
+  .proto-a-main {
+    padding: 24px 16px 48px;
+  }
+  .ledger-row {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 22px 0;
+  }
+  .ledger-rail {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 12px;
+    padding-top: 0;
+  }
+  .ledger-num {
+    font-size: 1.35rem;
+  }
+}

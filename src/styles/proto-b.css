@@ -1,0 +1,157 @@
+/* 原型 B：音乐厅舞台卡片网格（Concert Hall Card Grid） */
+body[data-proto="b"] {
+  --bg: #111216;
+  --surface: #1a1c22;
+  --surface-alt: #22252d;
+  --bar-bg: rgba(17, 18, 22, 0.9);
+  --fg: #efece4;
+  --fg-soft: #d7d2c6;
+  --muted: #9b9588;
+  --border: #2b2e38;
+  --accent: #d9a754;
+  --accent-contrast: #14120e;
+  --bili-bg: rgba(217, 167, 84, 0.1);
+  --bili-border: rgba(217, 167, 84, 0.35);
+  --bili-fg: #e6ba70;
+  --selection-bg: rgba(217, 167, 84, 0.25);
+  --container-max: 1320px;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+.proto-b-main {
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 36px 24px 56px;
+}
+
+.proto-b-head {
+  margin-bottom: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.proto-b-title {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: clamp(1.9rem, 3.8vw, 2.8rem);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.proto-b-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 22px;
+  align-items: start;
+}
+
+.stage-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 22px 22px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: border-color 180ms var(--ease-out-expo), transform 180ms var(--ease-out-expo);
+}
+
+.stage-card:hover {
+  border-color: rgba(217, 167, 84, 0.45);
+}
+
+.stage-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.stage-card-meta {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 0.84rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.stage-card-num {
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 0.98rem;
+}
+
+.stage-card-titles {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.stage-card-title-zh {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.stage-card-title-en {
+  font-size: 0.86rem;
+  color: var(--muted);
+  font-style: italic;
+}
+
+.stage-card .ep-thesis {
+  color: var(--fg);
+  font-size: 0.98rem;
+  margin-bottom: 2px;
+}
+
+.stage-card .ep-plain {
+  font-size: 0.93rem;
+  margin-bottom: 4px;
+}
+
+.stage-card .ep-scenes {
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+
+.stage-card-footer {
+  margin-top: 2px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stage-card-footer .rep-details {
+  margin-top: 0;
+}
+
+.stage-card-foot-links {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+@media (max-width: 680px) {
+  .proto-b-main {
+    padding: 24px 16px 48px;
+  }
+  .proto-b-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .stage-card {
+    padding: 18px 16px;
+  }
+}

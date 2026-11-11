@@ -1,0 +1,24 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "bernstein-ypc",
+  "account_id": "ef7863c4de93e71c3496f940c8ab4865",
+  "compatibility_date": "2026-11-11",
+  "workers_dev": false,
+  "main": "worker.js",
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "run_worker_first": true,
+    "not_found_handling": "404-page"
+  },
+  "routes": [
+    {
+      "pattern": "xiaosang.cc/bernstein-ypc",
+      "zone_id": "a9ae8ed6c9a473e6c79daa58b29e8b12"
+    },
+    {
+      "pattern": "xiaosang.cc/bernstein-ypc/*",
+      "zone_id": "a9ae8ed6c9a473e6c79daa58b29e8b12"
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "name": "bernstein-ypc",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "node scripts/verify.mjs",
+    "deploy:check": "wrangler deploy --dry-run --config wrangler.jsonc",
+    "deploy": "npm run build && wrangler deploy --config wrangler.jsonc"
+  },
+  "devDependencies": {
+    "vite": "^6.0.0",
+    "wrangler": "4.128.0"
+  }
+}
