@@ -29,6 +29,11 @@
     "pdfUrl": "/bernstein-ypc/slides/ep-10.pdf",
     "pages": 15
   },
+  "13": {
+    "prefix": "/bernstein-ypc/static/29cb77ddd63056e8/",
+    "pdfUrl": "/bernstein-ypc/slides/ep-13.pdf",
+    "pages": 15
+  },
   "14": {
     "prefix": "/bernstein-ypc/static/d52ac5ca9f085b61/",
     "pdfUrl": "/bernstein-ypc/slides/ep-14.pdf",
@@ -67,6 +72,11 @@
   "23": {
     "prefix": "/bernstein-ypc/static/8fd61816d16c3fc2/",
     "pdfUrl": "/bernstein-ypc/slides/ep-23.pdf",
+    "pages": 15
+  },
+  "24": {
+    "prefix": "/bernstein-ypc/static/7533abb15e2b65b8/",
+    "pdfUrl": "/bernstein-ypc/slides/ep-24.pdf",
     "pages": 15
   },
   "26": {
