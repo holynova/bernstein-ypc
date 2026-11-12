@@ -110,31 +110,32 @@ a {
 .filter-pills {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 2px;
 }
 
 .filter-pill {
   appearance: none;
-  border: 1px solid var(--border);
+  border: 1px solid transparent;
   background: transparent;
-  padding: 3px 8px;
-  border-radius: 999px;
+  padding: 4px 7px;
+  border-radius: 6px;
   font-size: 0.75rem;
+  font-weight: 500;
   white-space: nowrap;
   color: var(--muted);
   cursor: pointer;
-  transition: border-color 160ms ease, color 160ms ease, background-color 160ms ease;
+  transition: color 150ms ease, background-color 150ms ease;
 }
 
 .filter-pill:hover {
-  border-color: var(--accent);
+  background: rgba(26, 25, 22, 0.05);
   color: var(--fg);
 }
 
 .filter-pill[aria-pressed="true"] {
   background: var(--accent);
-  border-color: var(--accent);
   color: var(--accent-contrast, #fff);
+  font-weight: 600;
 }
 
 .search-wrap {
@@ -155,12 +156,19 @@ a {
 .search-input {
   width: 240px;
   max-width: 100%;
-  padding: 7px 30px 7px 32px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--surface);
+  padding: 8px 30px 8px 33px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: var(--surface-alt, #f1ede3);
   font-size: 0.88rem;
-  transition: border-color 160ms ease;
+  transition: border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease;
+}
+
+.search-input:focus {
+  outline: none;
+  background: var(--surface);
+  border-color: rgba(147, 37, 31, 0.36);
+  box-shadow: 0 2px 10px rgba(26, 25, 22, 0.05);
 }
 
 .search-input::-webkit-search-cancel-button {
@@ -197,11 +205,6 @@ a {
 
 .search-input::placeholder {
   color: var(--muted);
-}
-
-.search-input:focus {
-  outline: none;
-  border-color: var(--accent);
 }
 
 /* Links & Action Chips */
