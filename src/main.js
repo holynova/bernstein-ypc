@@ -198,19 +198,9 @@ function scheduleSlideWarmupForActiveCover() {
 
   const runWarmup = () => {
     if (state.activeId !== epId || slideViewerState.open) return;
-    const nextSlideUrl = `${meta.prefix}2.webp`;
-    const doPrefetch = () => {
-      if (state.activeId !== epId || slideViewerState.open) {
-        scheduleFullSearchIdle();
-        return;
-      }
-      preloadSlideImg(nextSlideUrl, "low").then(() => scheduleFullSearchIdle());
-    };
-    if (typeof requestIdleCallback === "function") {
-      requestIdleCallback(doPrefetch, { timeout: 1200 });
-    } else {
-      setTimeout(doPrefetch, 150);
-    }
+    preloadSlideImg(`${meta.prefix}2.webp`, "low").then(() => {
+      scheduleFullSearchIdle();
+    });
   };
 
   if (coverImg.complete && coverImg.naturalWidth > 0) {
@@ -290,8 +280,9 @@ function syncView({ scrollStage = false, scrollDir = false } = {}) {
   }
 }
 
-const SLIDE_PRELOAD_MAX = 48;
+const SLIDE_PRELOAD_MAX = 64;
 const slidePreloadMap = new Map();
+const slideBitmapCache = new Map();
 const slideLoadedSet = new Set();
 const slideViewerState = {
   open: false,
@@ -303,31 +294,41 @@ const slideViewerState = {
 };
 
 function preloadSlideImg(url, priority = "low") {
-  if (!url) return Promise.resolve(false);
+  if (!url) return Promise.resolve(null);
+
+  if (slideBitmapCache.has(url)) {
+    const cachedIm = slideBitmapCache.get(url);
+    slideBitmapCache.delete(url);
+    slideBitmapCache.set(url, cachedIm);
+    return Promise.resolve(cachedIm);
+  }
+
   if (slidePreloadMap.has(url)) {
-    const cached = slidePreloadMap.get(url);
-    slidePreloadMap.delete(url);
-    slidePreloadMap.set(url, cached);
-    return cached;
+    return slidePreloadMap.get(url);
   }
-  if (slidePreloadMap.size >= SLIDE_PRELOAD_MAX) {
-    const oldestKey = slidePreloadMap.keys().next().value;
-    slidePreloadMap.delete(oldestKey);
-    slideLoadedSet.delete(oldestKey);
-  }
+
   const im = new Image();
   im.decoding = "async";
   if ("fetchPriority" in im) im.fetchPriority = priority;
   im.src = url;
+
   const ready = new Promise((resolve) => {
     const finish = (ok) => {
-      if (ok) {
+      if (ok && im.naturalWidth > 0) {
+        if (slideBitmapCache.size >= SLIDE_PRELOAD_MAX) {
+          const oldestKey = slideBitmapCache.keys().next().value;
+          slideBitmapCache.delete(oldestKey);
+          slideLoadedSet.delete(oldestKey);
+        }
+        slideBitmapCache.set(url, im);
         slideLoadedSet.add(url);
+        resolve(im);
       } else {
         slidePreloadMap.delete(url);
+        resolve(null);
       }
-      resolve(ok);
     };
+
     if (im.complete && im.naturalWidth > 0) {
       if (typeof im.decode === "function") {
         im.decode().then(
@@ -351,6 +352,7 @@ function preloadSlideImg(url, priority = "low") {
     };
     im.onerror = () => finish(false);
   });
+
   slidePreloadMap.set(url, ready);
   return ready;
 }
@@ -451,17 +453,21 @@ function showSlidePage(page) {
   const pill = document.getElementById("slide-loading-pill");
 
   const startSequentialPrefetch = async () => {
-    const queue = [];
-    if (clamped + 1 <= total) queue.push([`${meta.prefix}${clamped + 1}.webp`, "high"]);
-    if (clamped + 2 <= total) queue.push([`${meta.prefix}${clamped + 2}.webp`, "low"]);
-    if (clamped - 1 >= 1) queue.push([`${meta.prefix}${clamped - 1}.webp`, "low"]);
-    for (const [nextUrl, prio] of queue) {
+    if (clamped + 1 <= total) {
       if (!slideViewerState.open || token !== slideViewerState.renderToken) return;
-      await preloadSlideImg(nextUrl, prio);
+      await preloadSlideImg(`${meta.prefix}${clamped + 1}.webp`, "high");
+    }
+    if (clamped + 2 <= total) {
+      if (!slideViewerState.open || token !== slideViewerState.renderToken) return;
+      await preloadSlideImg(`${meta.prefix}${clamped + 2}.webp`, "low");
+    }
+    if (clamped - 1 >= 1) {
+      if (!slideViewerState.open || token !== slideViewerState.renderToken) return;
+      await preloadSlideImg(`${meta.prefix}${clamped - 1}.webp`, "low");
     }
   };
 
-  if (slideLoadedSet.has(url)) {
+  if (slideBitmapCache.has(url) || slideLoadedSet.has(url)) {
     if (canvas) canvas.classList.remove("is-loading");
     if (pill) pill.hidden = true;
     img.src = url;
@@ -480,12 +486,14 @@ function showSlidePage(page) {
     }, 120);
   }
 
-  preloadSlideImg(url, "high").then(() => {
+  preloadSlideImg(url, "high").then((cachedIm) => {
     if (pillTimer) clearTimeout(pillTimer);
     if (!slideViewerState.open || token !== slideViewerState.renderToken) return;
     if (canvas) canvas.classList.remove("is-loading");
     if (pill) pill.hidden = true;
-    img.src = url;
+    if (cachedIm) {
+      img.src = url;
+    }
     startSequentialPrefetch();
   });
 }
@@ -501,17 +509,6 @@ function openSlideViewer(epId, page = 1) {
 
   const titleEl = document.getElementById("slide-viewer-title");
   if (titleEl) titleEl.textContent = `第 ${ep.id} 集 · ${ep.titleZh}`;
-
-  const pdfEl = document.getElementById("slide-pdf-link");
-  if (pdfEl) {
-    if (meta.pdfUrl) {
-      pdfEl.href = meta.pdfUrl;
-      pdfEl.download = `ep-${String(ep.id).padStart(2, "0")}.pdf`;
-      pdfEl.hidden = false;
-    } else {
-      pdfEl.hidden = true;
-    }
-  }
 
   viewer.hidden = false;
   document.documentElement.classList.add("slide-viewer-open");
@@ -723,7 +720,11 @@ app.addEventListener("focusin", (e) => {
   const selectBtn = e.target.closest?.("[data-select-ep]");
   if (selectBtn) {
     const hoverId = Number(selectBtn.dataset.selectEp);
-    if (hoverId) ensureEpisodeDetail(hoverId, { priority: "low" });
+    if (hoverId) {
+      ensureEpisodeDetail(hoverId, { priority: "low" });
+      const meta = slidesMap[String(hoverId)];
+      if (meta?.prefix) preloadSlideImg(`${meta.prefix}1.webp`, "low");
+    }
   }
 });
 
@@ -733,7 +734,24 @@ app.addEventListener(
     const selectBtn = e.target.closest?.("[data-select-ep]");
     if (selectBtn) {
       const hoverId = Number(selectBtn.dataset.selectEp);
-      if (hoverId) ensureEpisodeDetail(hoverId, { priority: "low" });
+      if (hoverId) {
+        ensureEpisodeDetail(hoverId, { priority: "low" });
+        const meta = slidesMap[String(hoverId)];
+        if (meta?.prefix) {
+          preloadSlideImg(`${meta.prefix}1.webp`, "high");
+          preloadSlideImg(`${meta.prefix}2.webp`, "low");
+        }
+      }
+      return;
+    }
+
+    const openBtn = e.target.closest?.("[data-open-slides]");
+    if (openBtn) {
+      const epId = Number(openBtn.dataset.openSlides);
+      const meta = slidesMap[String(epId)];
+      if (meta?.prefix) {
+        preloadSlideImg(`${meta.prefix}2.webp`, "high");
+      }
     }
   },
   { passive: true }

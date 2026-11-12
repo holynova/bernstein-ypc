@@ -91,11 +91,6 @@ export function renderActionLinks(ep, slide) {
 function renderSlideStrip(ep, slide) {
   if (!slide || !slide.prefix || !slide.pages) return "";
   const coverSrc = `${slide.prefix}1.webp`;
-  const pdfLink = slide.pdfUrl
-    ? `<a class="script-link" href="${esc(slide.pdfUrl)}" target="_blank" rel="noopener" download="ep-${String(
-        ep.id
-      ).padStart(2, "0")}.pdf">下载 PDF ↗</a>`
-    : "";
   return `
     <section class="slide-strip" aria-label="课程图解幻灯片">
       <button
@@ -116,7 +111,6 @@ function renderSlideStrip(ep, slide) {
         />
         <span class="slide-cover-badge tabular-nums">1 / ${slide.pages} · 全屏</span>
       </button>
-      ${pdfLink ? `<div class="slide-strip-bar">${pdfLink}</div>` : ""}
     </section>
   `;
 }
@@ -198,6 +192,7 @@ export function renderDirItems(episodes, activeId, slidesMap = {}) {
   return episodes
     .map((ep) => {
       const hasSlides = Boolean(slidesMap[String(ep.id)]);
+      const hasBilibili = Boolean(ep.hasBilibili ?? ep.bilibili);
       return `
       <li>
         <button
@@ -209,7 +204,14 @@ export function renderDirItems(episodes, activeId, slidesMap = {}) {
           <span class="dir-num">${String(ep.id).padStart(2, "0")}</span>
           <span class="dir-title">${esc(ep.titleZh)}</span>
           <span class="dir-meta">
-            ${hasSlides ? `<span class="dir-slide-dot" title="含图解 PPT" aria-hidden="true"></span>` : ""}
+            ${
+              hasBilibili || hasSlides
+                ? `<span class="dir-indicators" aria-hidden="true">
+                    ${hasBilibili ? `<span class="dir-dot is-bili" title="含 B站掘火中译视频"></span>` : ""}
+                    ${hasSlides ? `<span class="dir-dot is-slide" title="含图解 PPT"></span>` : ""}
+                  </span>`
+                : ""
+            }
             <span class="dir-year">${esc(ep.date.slice(0, 4))}</span>
           </span>
         </button>
@@ -289,7 +291,6 @@ export function renderSlideViewerShell() {
         </div>
         <div class="slide-viewer-controls">
           <span class="slide-page-badge tabular-nums" id="slide-page-badge"></span>
-          <a class="slide-bar-btn" id="slide-pdf-link" target="_blank" rel="noopener" hidden>下载 PDF</a>
           <button type="button" class="slide-bar-btn" id="slide-fs-btn" data-slide-fs aria-label="切换全屏">全屏</button>
           <button type="button" class="slide-bar-btn is-close" data-slide-close aria-label="关闭图解阅读器">关闭</button>
         </div>

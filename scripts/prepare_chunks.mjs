@@ -24,6 +24,7 @@ const indexPayload = {
     date: ep.date,
     dateZh: ep.dateZh,
     category: ep.category,
+    hasBilibili: Boolean(ep.bilibili),
   })),
 };
 

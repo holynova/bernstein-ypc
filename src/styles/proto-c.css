@@ -271,12 +271,34 @@ body[data-proto="c"] .site-footer {
   gap: 6px;
 }
 
+.dir-indicators {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.dir-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+.dir-dot.is-bili {
+  background: #00aeec;
+  opacity: 0.92;
+}
+
+.dir-dot.is-slide,
 .dir-slide-dot {
   width: 6px;
   height: 6px;
   border-radius: 999px;
   background: var(--accent);
-  opacity: 0.78;
+  opacity: 0.82;
+  flex-shrink: 0;
+  display: inline-block;
 }
 
 .slide-trigger-btn {
