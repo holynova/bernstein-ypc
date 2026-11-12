@@ -68,7 +68,7 @@ export function renderSidebarToolbar({ category, query }) {
   `;
 }
 
-function renderActionLinks(ep, slide) {
+export function renderActionLinks(ep, slide) {
   const slidesBtn = slide
     ? `<button type="button" class="slide-trigger-btn" data-open-slides="${ep.id}" data-slide-page="1">图解 PPT · ${slide.pages} 页</button>`
     : "";
@@ -77,13 +77,15 @@ function renderActionLinks(ep, slide) {
     ? `<a class="bili-link" href="${esc(ep.bilibili.url)}" target="_blank" rel="noopener" title="${esc(
         ep.bilibili.title
       )}">掘火中译 · ${esc(ep.bilibili.duration)} ↗</a>`
-    : `<a class="bili-link is-search" href="${esc(ep.bilibiliSearchUrl)}" target="_blank" rel="noopener">B站检索 ↗</a>`;
+    : ep.bilibiliSearchUrl
+    ? `<a class="bili-link is-search" href="${esc(ep.bilibiliSearchUrl)}" target="_blank" rel="noopener">B站检索 ↗</a>`
+    : "";
 
   const script = ep.scriptUrl
     ? `<a class="script-link" href="${esc(ep.scriptUrl)}" target="_blank" rel="noopener">英文讲稿 ↗</a>`
     : "";
 
-  return `<div class="ep-links">${slidesBtn}${bili}${script}</div>`;
+  return `<div class="ep-links" data-stage-links>${slidesBtn}${bili}${script}</div>`;
 }
 
 function renderSlideStrip(ep, slide) {
@@ -106,8 +108,10 @@ function renderSlideStrip(ep, slide) {
         <img
           class="slide-cover-img"
           src="${esc(coverSrc)}"
+          width="1376"
+          height="768"
           alt="第 ${ep.id} 集《${esc(ep.titleZh)}》图解幻灯片第 1 页"
-          loading="lazy"
+          fetchpriority="high"
           decoding="async"
         />
         <span class="slide-cover-badge tabular-nums">1 / ${slide.pages} · 全屏</span>
@@ -168,6 +172,9 @@ function renderRepertoire(ep, audioState) {
 }
 
 function renderLessonBody(ep) {
+  if (!ep.thesis && !ep.plain) {
+    return `<p class="ep-thesis" aria-busy="true">正在载入讲稿与曲目…</p>`;
+  }
   return `
     <p class="ep-thesis">${esc(ep.thesis)}</p>
     <p class="ep-plain">${esc(ep.plain)}</p>
@@ -178,6 +185,10 @@ function renderLessonBody(ep) {
     }
     <div class="ep-concepts">${esc(ep.concepts)}</div>
   `;
+}
+
+export function renderStageDetail(ep, audioState) {
+  return `${renderLessonBody(ep)}${renderRepertoire(ep, audioState)}`;
 }
 
 export function renderDirItems(episodes, activeId, slidesMap = {}) {
@@ -231,8 +242,9 @@ export function renderStageContent(episodes, allEpisodes, activeId, audioState, 
     <h2 class="stage-title-zh">${esc(active.titleZh)}</h2>
     <p class="stage-title-en">${esc(active.titleEn)}</p>
     ${renderSlideStrip(active, slide)}
-    ${renderLessonBody(active)}
-    ${renderRepertoire(active, audioState)}
+    <div class="stage-detail-body" data-stage-body>
+      ${renderStageDetail(active, audioState)}
+    </div>
     <div class="stage-nav">
       <button type="button" class="stage-nav-btn" data-select-ep="${prevEp ? prevEp.id : ""}" ${
         prevEp ? "" : "disabled"
@@ -286,7 +298,8 @@ export function renderSlideViewerShell() {
         <button type="button" class="slide-zone is-prev" data-slide-dir="-1" aria-label="上一页">
           <span class="slide-arrow" aria-hidden="true">‹</span>
         </button>
-        <img id="slide-img" class="slide-img" alt="" decoding="async" />
+        <img id="slide-img" class="slide-img" width="1376" height="768" alt="" decoding="async" />
+        <span class="slide-loading-pill" id="slide-loading-pill" hidden>加载中…</span>
         <button type="button" class="slide-zone is-next" data-slide-dir="1" aria-label="下一页">
           <span class="slide-arrow" aria-hidden="true">›</span>
         </button>

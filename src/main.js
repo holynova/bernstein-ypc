@@ -1,18 +1,30 @@
 import "./styles/base.css";
 import "./styles/proto-c.css";
 
-import dataset from "./data/episodes.json";
+import indexData from "./data/index.json";
 import slidesMap from "./data/slides.json";
 import { getAudioState, stopPreview, subscribeAudio, togglePreview } from "./audio.js";
 import {
   formatCountLabel,
+  renderActionLinks,
   renderAudioDock,
   renderDirItems,
   renderPrototypeCShell,
   renderSlideViewerShell,
   renderStageContent,
+  renderStageDetail,
   renderTopBar,
 } from "./render.js";
+
+const dataset = {
+  bilibiliCollectionUrl: indexData.bilibiliCollectionUrl,
+  episodes: indexData.episodes.map((ep) => ({ ...ep })),
+};
+const episodeById = new Map(dataset.episodes.map((ep) => [ep.id, ep]));
+const episodePromises = new Map();
+let fullEpisodesPromise = null;
+let fullEpisodesLoaded = false;
+let fullIdleScheduled = false;
 
 function readInitialEpId() {
   const params = new URLSearchParams(window.location.search);
@@ -35,29 +47,84 @@ const state = {
 };
 
 const app = document.getElementById("app");
-const indexedText = new Map(
-  dataset.episodes.map((ep) => {
-    const repText = (ep.repertoire || [])
-      .map((t) => `${t.composer} ${t.piece} ${t.titleZh} ${t.recordingArtist || ""}`)
-      .join(" ");
-    const blob = [
-      ep.id,
-      `第${ep.id}集`,
-      ep.date,
-      ep.titleZh,
-      ep.titleEn,
-      ep.category,
-      ep.concepts,
-      ep.thesis,
-      ep.plain,
-      ...(ep.scenes || []),
-      repText,
-    ]
-      .join(" ")
-      .toLowerCase();
-    return [ep.id, blob];
-  })
-);
+
+function buildSearchBlob(ep) {
+  const repText = (ep.repertoire || [])
+    .map((t) => `${t.composer} ${t.piece} ${t.titleZh} ${t.recordingArtist || ""}`)
+    .join(" ");
+  return [
+    ep.id,
+    `第${ep.id}集`,
+    ep.date,
+    ep.titleZh,
+    ep.titleEn,
+    ep.category,
+    ep.concepts || "",
+    ep.thesis || "",
+    ep.plain || "",
+    ...(ep.scenes || []),
+    repText,
+  ]
+    .join(" ")
+    .toLowerCase();
+}
+
+const indexedText = new Map(dataset.episodes.map((ep) => [ep.id, buildSearchBlob(ep)]));
+
+function mergeEpisodeDetail(epData) {
+  if (!epData || !epData.id) return null;
+  const target = episodeById.get(epData.id);
+  if (!target) return null;
+  Object.assign(target, epData, { _loaded: true });
+  indexedText.set(target.id, buildSearchBlob(target));
+  return target;
+}
+
+function ensureEpisodeDetail(epId, { priority = "high" } = {}) {
+  const existing = episodeById.get(epId);
+  if (!existing) return Promise.resolve(null);
+  if (existing._loaded) return Promise.resolve(existing);
+  if (episodePromises.has(epId)) return episodePromises.get(epId);
+
+  let reqPromise;
+  if (
+    typeof window !== "undefined" &&
+    window.__EP_PRELOAD__ &&
+    String(window.__EP_ID__) === String(epId)
+  ) {
+    reqPromise = window.__EP_PRELOAD__;
+    window.__EP_PRELOAD__ = null;
+  } else {
+    const base = import.meta.env.BASE_URL || "/bernstein-ypc/";
+    reqPromise = fetch(`${base}ep/${indexData.epHash}/${epId}.json`, { priority })
+      .then((res) => (res.ok ? res.json() : null))
+      .catch(() => null);
+  }
+
+  const p = reqPromise.then((data) => {
+    if (data) return mergeEpisodeDetail(data);
+    episodePromises.delete(epId);
+    return existing;
+  });
+  episodePromises.set(epId, p);
+  return p;
+}
+
+function loadFullEpisodes() {
+  if (fullEpisodesLoaded) return Promise.resolve();
+  if (fullEpisodesPromise) return fullEpisodesPromise;
+  fullEpisodesPromise = import("./data/episodes.json")
+    .then((mod) => {
+      const list = mod?.default?.episodes || [];
+      for (const ep of list) mergeEpisodeDetail(ep);
+      fullEpisodesLoaded = true;
+      if (state.query.trim()) syncView();
+    })
+    .catch(() => {
+      fullEpisodesPromise = null;
+    });
+  return fullEpisodesPromise;
+}
 
 function filterEpisodes() {
   const terms = state.query.trim().toLowerCase().split(/\s+/).filter(Boolean);
@@ -86,6 +153,79 @@ function updateAudioButtons() {
   const dock = document.querySelector(".audio-dock");
   if (dock) {
     dock.outerHTML = renderAudioDock(state.audioState);
+  }
+}
+
+function patchStageDetail(ep) {
+  const stage = document.getElementById("proto-c-stage");
+  if (!stage || stage.dataset.renderedEpId !== String(ep.id)) return;
+  const linksEl = stage.querySelector("[data-stage-links]");
+  if (linksEl) {
+    linksEl.outerHTML = renderActionLinks(ep, slidesMap[String(ep.id)] || null);
+  }
+  const bodyEl = stage.querySelector("[data-stage-body]");
+  if (bodyEl) {
+    bodyEl.innerHTML = renderStageDetail(ep, state.audioState);
+  }
+}
+
+function scheduleFullSearchIdle() {
+  if (fullEpisodesLoaded || fullIdleScheduled) return;
+  fullIdleScheduled = true;
+  const kick = () => {
+    if (typeof requestIdleCallback === "function") {
+      requestIdleCallback(() => loadFullEpisodes(), { timeout: 2000 });
+    } else {
+      setTimeout(() => loadFullEpisodes(), 250);
+    }
+  };
+  if (document.readyState === "complete") {
+    setTimeout(kick, 250);
+  } else {
+    window.addEventListener("load", () => setTimeout(kick, 250), { once: true });
+  }
+}
+
+function scheduleSlideWarmupForActiveCover() {
+  const epId = state.activeId;
+  const meta = slidesMap[String(epId)];
+  const stage = document.getElementById("proto-c-stage");
+  const coverImg = stage?.querySelector(".slide-cover-img");
+  if (!meta || meta.pages < 2 || !coverImg) {
+    scheduleFullSearchIdle();
+    return;
+  }
+
+  const runWarmup = () => {
+    if (state.activeId !== epId || slideViewerState.open) return;
+    const nextSlideUrl = `${meta.prefix}2.webp`;
+    const doPrefetch = () => {
+      if (state.activeId !== epId || slideViewerState.open) {
+        scheduleFullSearchIdle();
+        return;
+      }
+      preloadSlideImg(nextSlideUrl, "low").then(() => scheduleFullSearchIdle());
+    };
+    if (typeof requestIdleCallback === "function") {
+      requestIdleCallback(doPrefetch, { timeout: 1200 });
+    } else {
+      setTimeout(doPrefetch, 150);
+    }
+  };
+
+  if (coverImg.complete && coverImg.naturalWidth > 0) {
+    slideLoadedSet.add(`${meta.prefix}1.webp`);
+    runWarmup();
+  } else {
+    coverImg.addEventListener(
+      "load",
+      () => {
+        slideLoadedSet.add(`${meta.prefix}1.webp`);
+        runWarmup();
+      },
+      { once: true }
+    );
+    coverImg.addEventListener("error", () => scheduleFullSearchIdle(), { once: true });
   }
 }
 
@@ -120,21 +260,39 @@ function syncView({ scrollStage = false, scrollDir = false } = {}) {
 
   const stage = document.getElementById("proto-c-stage");
   if (stage) {
-    stage.innerHTML = renderStageContent(
-      filtered,
-      dataset.episodes,
-      state.activeId,
-      state.audioState,
-      slidesMap
-    );
+    const active = filtered.find((e) => e.id === state.activeId) || filtered[0] || null;
+    const sameEpisode = active && stage.dataset.renderedEpId === String(active.id);
+    if (sameEpisode) {
+      patchStageDetail(active);
+    } else {
+      stage.dataset.renderedEpId = active ? String(active.id) : "";
+      stage.innerHTML = renderStageContent(
+        filtered,
+        dataset.episodes,
+        state.activeId,
+        state.audioState,
+        slidesMap
+      );
+      if (active) {
+        scheduleSlideWarmupForActiveCover();
+      }
+    }
+    if (active && !active._loaded) {
+      ensureEpisodeDetail(active.id, { priority: "high" }).then((loaded) => {
+        if (loaded && state.activeId === loaded.id) {
+          patchStageDetail(loaded);
+        }
+      });
+    }
     if (scrollStage && window.innerWidth <= 920) {
       stage.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   }
 }
 
-const SLIDE_PRELOAD_MAX = 45;
+const SLIDE_PRELOAD_MAX = 48;
 const slidePreloadMap = new Map();
+const slideLoadedSet = new Set();
 const slideViewerState = {
   open: false,
   epId: null,
@@ -144,23 +302,55 @@ const slideViewerState = {
   touchStartY: 0,
 };
 
-function preloadSlideImg(url) {
-  if (!url || slidePreloadMap.has(url)) return slidePreloadMap.get(url) || null;
+function preloadSlideImg(url, priority = "low") {
+  if (!url) return Promise.resolve(false);
+  if (slidePreloadMap.has(url)) {
+    const cached = slidePreloadMap.get(url);
+    slidePreloadMap.delete(url);
+    slidePreloadMap.set(url, cached);
+    return cached;
+  }
   if (slidePreloadMap.size >= SLIDE_PRELOAD_MAX) {
     const oldestKey = slidePreloadMap.keys().next().value;
     slidePreloadMap.delete(oldestKey);
+    slideLoadedSet.delete(oldestKey);
   }
   const im = new Image();
   im.decoding = "async";
+  if ("fetchPriority" in im) im.fetchPriority = priority;
   im.src = url;
-  const ready =
-    typeof im.decode === "function"
-      ? im.decode().catch(() => {})
-      : new Promise((resolve) => {
-          if (im.complete) return resolve();
-          im.onload = () => resolve();
-          im.onerror = () => resolve();
-        });
+  const ready = new Promise((resolve) => {
+    const finish = (ok) => {
+      if (ok) {
+        slideLoadedSet.add(url);
+      } else {
+        slidePreloadMap.delete(url);
+      }
+      resolve(ok);
+    };
+    if (im.complete && im.naturalWidth > 0) {
+      if (typeof im.decode === "function") {
+        im.decode().then(
+          () => finish(true),
+          () => finish(im.naturalWidth > 0)
+        );
+      } else {
+        finish(true);
+      }
+      return;
+    }
+    im.onload = () => {
+      if (typeof im.decode === "function") {
+        im.decode().then(
+          () => finish(true),
+          () => finish(im.naturalWidth > 0)
+        );
+      } else {
+        finish(true);
+      }
+    };
+    im.onerror = () => finish(false);
+  });
   slidePreloadMap.set(url, ready);
   return ready;
 }
@@ -229,6 +419,10 @@ function showSlidePage(page) {
   slideViewerState.page = clamped;
 
   if (clamped > total) {
+    ++slideViewerState.renderToken;
+    document.getElementById("slide-canvas")?.classList.remove("is-loading");
+    const pill = document.getElementById("slide-loading-pill");
+    if (pill) pill.hidden = true;
     img.hidden = true;
     endEl.hidden = false;
     badge.textContent = `${total} / ${total}`;
@@ -253,19 +447,47 @@ function showSlidePage(page) {
 
   const url = `${meta.prefix}${clamped}.webp`;
   const token = ++slideViewerState.renderToken;
-  const ready = preloadSlideImg(url);
-  if (clamped + 1 <= total) preloadSlideImg(`${meta.prefix}${clamped + 1}.webp`);
-  if (clamped + 2 <= total) preloadSlideImg(`${meta.prefix}${clamped + 2}.webp`);
+  const canvas = document.getElementById("slide-canvas");
+  const pill = document.getElementById("slide-loading-pill");
 
-  const applySrc = () => {
-    if (token !== slideViewerState.renderToken) return;
-    img.src = url;
+  const startSequentialPrefetch = async () => {
+    const queue = [];
+    if (clamped + 1 <= total) queue.push([`${meta.prefix}${clamped + 1}.webp`, "high"]);
+    if (clamped + 2 <= total) queue.push([`${meta.prefix}${clamped + 2}.webp`, "low"]);
+    if (clamped - 1 >= 1) queue.push([`${meta.prefix}${clamped - 1}.webp`, "low"]);
+    for (const [nextUrl, prio] of queue) {
+      if (!slideViewerState.open || token !== slideViewerState.renderToken) return;
+      await preloadSlideImg(nextUrl, prio);
+    }
   };
-  if (ready && typeof ready.then === "function") {
-    ready.then(applySrc);
-  } else {
-    applySrc();
+
+  if (slideLoadedSet.has(url)) {
+    if (canvas) canvas.classList.remove("is-loading");
+    if (pill) pill.hidden = true;
+    img.src = url;
+    startSequentialPrefetch();
+    return;
   }
+
+  let pillTimer = null;
+  if (canvas) canvas.classList.add("is-loading");
+  if (pill) {
+    pill.hidden = true;
+    pillTimer = setTimeout(() => {
+      if (slideViewerState.open && token === slideViewerState.renderToken) {
+        pill.hidden = false;
+      }
+    }, 120);
+  }
+
+  preloadSlideImg(url, "high").then(() => {
+    if (pillTimer) clearTimeout(pillTimer);
+    if (!slideViewerState.open || token !== slideViewerState.renderToken) return;
+    if (canvas) canvas.classList.remove("is-loading");
+    if (pill) pill.hidden = true;
+    img.src = url;
+    startSequentialPrefetch();
+  });
 }
 
 function openSlideViewer(epId, page = 1) {
@@ -299,6 +521,11 @@ function openSlideViewer(epId, page = 1) {
 function closeSlideViewer() {
   const viewer = document.getElementById("slide-viewer");
   if (!viewer) return;
+  ++slideViewerState.renderToken;
+  const canvas = document.getElementById("slide-canvas");
+  const pill = document.getElementById("slide-loading-pill");
+  if (canvas) canvas.classList.remove("is-loading");
+  if (pill) pill.hidden = true;
   if (document.fullscreenElement === viewer) {
     document.exitFullscreen?.().catch(() => {});
   }
@@ -336,6 +563,20 @@ function mountApp() {
     ${renderAudioDock(state.audioState)}
     ${renderSlideViewerShell()}
   `;
+
+  const stage = document.getElementById("proto-c-stage");
+  const initialActive = filtered.find((e) => e.id === state.activeId) || filtered[0] || null;
+  if (stage) {
+    stage.dataset.renderedEpId = initialActive ? String(initialActive.id) : "";
+  }
+  scheduleSlideWarmupForActiveCover();
+  if (initialActive && !initialActive._loaded) {
+    ensureEpisodeDetail(initialActive.id, { priority: "high" }).then((loaded) => {
+      if (loaded && state.activeId === loaded.id) {
+        patchStageDetail(loaded);
+      }
+    });
+  }
 
   const canvas = document.getElementById("slide-canvas");
   if (canvas) {
@@ -467,14 +708,40 @@ app.addEventListener("compositionstart", (e) => {
 
 app.addEventListener("compositionend", (e) => {
   if (e.target.classList.contains("search-input")) {
+    if (!fullEpisodesLoaded) loadFullEpisodes();
     state.isComposing = false;
     state.query = e.target.value;
     syncView();
   }
 });
 
+app.addEventListener("focusin", (e) => {
+  if (e.target.classList.contains("search-input")) {
+    loadFullEpisodes();
+    return;
+  }
+  const selectBtn = e.target.closest?.("[data-select-ep]");
+  if (selectBtn) {
+    const hoverId = Number(selectBtn.dataset.selectEp);
+    if (hoverId) ensureEpisodeDetail(hoverId, { priority: "low" });
+  }
+});
+
+app.addEventListener(
+  "pointerover",
+  (e) => {
+    const selectBtn = e.target.closest?.("[data-select-ep]");
+    if (selectBtn) {
+      const hoverId = Number(selectBtn.dataset.selectEp);
+      if (hoverId) ensureEpisodeDetail(hoverId, { priority: "low" });
+    }
+  },
+  { passive: true }
+);
+
 app.addEventListener("input", (e) => {
   if (e.target.classList.contains("search-input") && !state.isComposing) {
+    if (!fullEpisodesLoaded) loadFullEpisodes();
     state.query = e.target.value;
     syncView();
   }
@@ -569,4 +836,12 @@ subscribeAudio((nextAudio) => {
   updateAudioButtons();
 });
 
-mountApp();
+async function boot() {
+  await Promise.race([
+    ensureEpisodeDetail(state.activeId, { priority: "high" }),
+    new Promise((resolve) => setTimeout(resolve, 120)),
+  ]);
+  mountApp();
+}
+
+boot();

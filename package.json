@@ -4,8 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "predev": "node scripts/prepare_chunks.mjs",
     "dev": "vite",
-    "build": "vite build",
+    "build": "node scripts/prepare_chunks.mjs && vite build",
     "preview": "vite preview",
     "test": "node scripts/verify.mjs",
     "deploy:check": "wrangler deploy --dry-run --config wrangler.jsonc",
