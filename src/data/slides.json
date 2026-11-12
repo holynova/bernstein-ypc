@@ -14,6 +14,11 @@
     "pdfUrl": "/bernstein-ypc/slides/ep-05.pdf",
     "pages": 15
   },
+  "6": {
+    "prefix": "/bernstein-ypc/static/3d333667f3f4bc9d/",
+    "pdfUrl": "/bernstein-ypc/slides/ep-06.pdf",
+    "pages": 15
+  },
   "7": {
     "prefix": "/bernstein-ypc/static/1da1f85cc56b6904/",
     "pdfUrl": "/bernstein-ypc/slides/ep-07.pdf",
