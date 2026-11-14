@@ -428,7 +428,7 @@ function showSlidePage(page) {
     img.hidden = true;
     endEl.hidden = false;
     badge.textContent = `${total} / ${total}`;
-    if (endTitle) endTitle.textContent = `第 ${ep.id} 集 · ${ep.titleZh}（共 ${total} 页）`;
+    if (endTitle) endTitle.textContent = `第 ${ep.id} 集 ${ep.titleZh}（共 ${total} 页）`;
     const nextReady = getNextReadyEpisode(ep.id);
     if (nextEpBtn) {
       if (nextReady) {
@@ -508,7 +508,7 @@ function openSlideViewer(epId, page = 1) {
   slideViewerState.epId = epId;
 
   const titleEl = document.getElementById("slide-viewer-title");
-  if (titleEl) titleEl.textContent = `第 ${ep.id} 集 · ${ep.titleZh}`;
+  if (titleEl) titleEl.textContent = `第 ${ep.id} 集 ${ep.titleZh}`;
 
   viewer.hidden = false;
   document.documentElement.classList.add("slide-viewer-open");
@@ -554,8 +554,8 @@ function mountApp() {
       slidesMap,
     })}
     <footer class="site-footer">
-      <span>讲稿依据 Leonard Bernstein 官方脚本 · 纽约爱乐档案核验</span>
-      <span>${appVersion} · B站 <a class="script-link" href="${dataset.bilibiliCollectionUrl}" target="_blank" rel="noopener">掘火档案（掘火中译）</a></span>
+      <span>讲稿依据 Leonard Bernstein 官方脚本，纽约爱乐档案核验</span>
+      <span>${appVersion} B站 <a class="script-link" href="${dataset.bilibiliCollectionUrl}" target="_blank" rel="noopener">掘火档案（掘火中译）</a></span>
     </footer>
     ${renderAudioDock(state.audioState)}
     ${renderSlideViewerShell()}

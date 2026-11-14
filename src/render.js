@@ -45,7 +45,7 @@ export function renderSidebarToolbar({ category, query }) {
           type="search"
           class="search-input"
           value="${esc(query)}"
-          placeholder="搜索课题、作曲家、曲目… ( / )"
+          placeholder="搜索课题、作曲家、曲目…"
           aria-label="搜索课程、作曲家、曲目或概念"
           autocomplete="off"
         />
@@ -57,6 +57,7 @@ export function renderSidebarToolbar({ category, query }) {
           ${query ? "" : "hidden"}
         >×</button>
       </div>
+      <p class="dir-legend"><span class="dir-dot is-bili"></span>有 B站视频<span class="dir-dot is-slide"></span>有图解 PPT</p>
       <div class="filter-pills" role="group" aria-label="课程分类">
         ${CATEGORIES.map(
           (c) => `<button type="button" class="filter-pill" data-category="${esc(c)}" aria-pressed="${
@@ -70,13 +71,13 @@ export function renderSidebarToolbar({ category, query }) {
 
 export function renderActionLinks(ep, slide) {
   const slidesBtn = slide
-    ? `<button type="button" class="slide-trigger-btn" data-open-slides="${ep.id}" data-slide-page="1">图解 PPT · ${slide.pages} 页</button>`
+    ? `<button type="button" class="slide-trigger-btn" data-open-slides="${ep.id}" data-slide-page="1">图解 PPT（${slide.pages} 页）</button>`
     : "";
 
   const bili = ep.bilibili
     ? `<a class="bili-link" href="${esc(ep.bilibili.url)}" target="_blank" rel="noopener" title="${esc(
         ep.bilibili.title
-      )}">掘火中译 · ${esc(ep.bilibili.duration)} ↗</a>`
+      )}">掘火中译 ${esc(ep.bilibili.duration)} ↗</a>`
     : ep.bilibiliSearchUrl
     ? `<a class="bili-link is-search" href="${esc(ep.bilibiliSearchUrl)}" target="_blank" rel="noopener">B站检索 ↗</a>`
     : "";
@@ -109,7 +110,7 @@ function renderSlideStrip(ep, slide) {
           fetchpriority="high"
           decoding="async"
         />
-        <span class="slide-cover-badge tabular-nums">1 / ${slide.pages} · 全屏</span>
+        <span class="slide-cover-badge tabular-nums">1 / ${slide.pages} 全屏</span>
       </button>
     </section>
   `;
@@ -122,7 +123,7 @@ function renderRepertoire(ep, audioState) {
     <details class="rep-details">
       <summary class="rep-summary">
         ${ICONS.chevron}
-        <span>曲目 · ${tracks.length} 首</span>
+        <span>曲目 ${tracks.length} 首</span>
       </summary>
       <ul class="rep-list">
         ${tracks
@@ -149,7 +150,7 @@ function renderRepertoire(ep, audioState) {
               <li class="rep-item">
                 <div class="rep-info">
                   <span class="rep-composer">${esc(t.composer)}</span>
-                  <span class="rep-piece">${esc(t.titleZh)} · ${esc(t.piece)}</span>
+                  <span class="rep-piece">${esc(t.titleZh)}（${esc(t.piece)}）</span>
                 </div>
                 <div class="rep-actions">
                   ${playBtn}
@@ -250,10 +251,10 @@ export function renderStageContent(episodes, allEpisodes, activeId, audioState, 
     <div class="stage-nav">
       <button type="button" class="stage-nav-btn" data-select-ep="${prevEp ? prevEp.id : ""}" ${
         prevEp ? "" : "disabled"
-      }>← ${prevEp ? `第 ${prevEp.id} 集 · ${esc(prevEp.titleZh)}` : "已至首课"}</button>
+      }>← ${prevEp ? `第 ${prevEp.id} 集 ${esc(prevEp.titleZh)}` : "已至首课"}</button>
       <button type="button" class="stage-nav-btn" data-select-ep="${nextEp ? nextEp.id : ""}" ${
         nextEp ? "" : "disabled"
-      }>${nextEp ? `第 ${nextEp.id} 集 · ${esc(nextEp.titleZh)}` : "已至末课"} →</button>
+      }>${nextEp ? `第 ${nextEp.id} 集 ${esc(nextEp.titleZh)}` : "已至末课"} →</button>
     </div>
   `;
 }
