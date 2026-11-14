@@ -1,4 +1,9 @@
 {
+  "2": {
+    "prefix": "/bernstein-ypc/static/5e1bad47f65e6a37/",
+    "pdfUrl": "/bernstein-ypc/slides/ep-02.pdf",
+    "pages": 15
+  },
   "3": {
     "prefix": "/bernstein-ypc/static/3b97910c5ae165d1/",
     "pdfUrl": "/bernstein-ypc/slides/ep-03.pdf",
