@@ -33,27 +33,6 @@ if (!fs.existsSync(indexOutPath) || fs.readFileSync(indexOutPath, "utf8") !== in
   fs.writeFileSync(indexOutPath, indexText, "utf8");
 }
 
-fs.mkdirSync(epRootDir, { recursive: true });
-const targetDir = path.join(epRootDir, epHash);
-const alreadyPopulated =
-  fs.existsSync(targetDir) &&
-  data.episodes.every((ep) => fs.existsSync(path.join(targetDir, `${ep.id}.json`)));
+fs.rmSync(epRootDir, { recursive: true, force: true });
 
-if (!alreadyPopulated) {
-  const tmpDir = path.join(epRootDir, `${epHash}.tmp-${process.pid}`);
-  fs.rmSync(tmpDir, { recursive: true, force: true });
-  fs.mkdirSync(tmpDir, { recursive: true });
-  for (const ep of data.episodes) {
-    fs.writeFileSync(path.join(tmpDir, `${ep.id}.json`), JSON.stringify(ep), "utf8");
-  }
-  fs.rmSync(targetDir, { recursive: true, force: true });
-  fs.renameSync(tmpDir, targetDir);
-}
-
-for (const entry of fs.readdirSync(epRootDir, { withFileTypes: true })) {
-  if (entry.isDirectory() && entry.name !== epHash) {
-    fs.rmSync(path.join(epRootDir, entry.name), { recursive: true, force: true });
-  }
-}
-
-console.log(`Prepared index + ${data.episodes.length} episode chunks -> ep/${epHash}/`);
+console.log(`Prepared index (${data.episodes.length} episodes; full bundle via Vite chunk)`);

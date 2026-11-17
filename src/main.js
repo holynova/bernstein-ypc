@@ -80,32 +80,13 @@ function mergeEpisodeDetail(epData) {
   return target;
 }
 
-function ensureEpisodeDetail(epId, { priority = "high" } = {}) {
+function ensureEpisodeDetail(epId) {
   const existing = episodeById.get(epId);
   if (!existing) return Promise.resolve(null);
   if (existing._loaded) return Promise.resolve(existing);
   if (episodePromises.has(epId)) return episodePromises.get(epId);
 
-  let reqPromise;
-  if (
-    typeof window !== "undefined" &&
-    window.__EP_PRELOAD__ &&
-    String(window.__EP_ID__) === String(epId)
-  ) {
-    reqPromise = window.__EP_PRELOAD__;
-    window.__EP_PRELOAD__ = null;
-  } else {
-    const base = import.meta.env.BASE_URL || "/bernstein-ypc/";
-    reqPromise = fetch(`${base}ep/${indexData.epHash}/${epId}.json`, { priority })
-      .then((res) => (res.ok ? res.json() : null))
-      .catch(() => null);
-  }
-
-  const p = reqPromise.then((data) => {
-    if (data) return mergeEpisodeDetail(data);
-    episodePromises.delete(epId);
-    return existing;
-  });
+  const p = loadFullEpisodes().then(() => episodeById.get(epId) || existing);
   episodePromises.set(epId, p);
   return p;
 }

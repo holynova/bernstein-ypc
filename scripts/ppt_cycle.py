@@ -798,7 +798,7 @@ def publish_site():
         return
 
     PORTFOLIO_SUBDIR.mkdir(parents=True, exist_ok=True)
-    subprocess.run(["rsync", "-a", "--delete", f"{ROOT / 'dist'}/", f"{PORTFOLIO_SUBDIR}/"], env=env, check=True, timeout=120)
+    subprocess.run(["rsync", "-a", "--delete", "--exclude=slides/", f"{ROOT / 'dist'}/", f"{PORTFOLIO_SUBDIR}/"], env=env, check=True, timeout=120)
     p_status = subprocess.check_output(
         ["git", "status", "--porcelain", "--", "bernstein-ypc"],
         cwd=str(PORTFOLIO_REPO),

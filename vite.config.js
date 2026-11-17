@@ -18,7 +18,7 @@ function bernsteinPreloadPlugin() {
         if (m) slideHashes[epId] = m[1];
       }
       const total = Number(idxData.totalEpisodes || idxData.episodes?.length || 53);
-      const inlineScript = `<script>!function(){var h=${JSON.stringify(idxData.epHash)},s=${JSON.stringify(slideHashes)},q=/[?&]ep=(\\d+)/i.exec(location.search),m=/^#ep-(\\d+)$/i.exec(location.hash),n=Number((q&&q[1])||(m&&m[1])||0),id=n>=1&&n<=${total}?String(n):"1",b="/bernstein-ypc/";window.__EP_ID__=id;window.__EP_PRELOAD__=fetch(b+"ep/"+h+"/"+id+".json",{priority:"high"}).then(function(r){return r.ok?r.json():null}).catch(function(){return null});if(s[id]){var l=document.createElement("link");l.rel="preload";l.as="image";l.href=b+"static/"+s[id]+"/1.webp";l.fetchPriority="high";document.head.appendChild(l);}}();</script>`;
+      const inlineScript = `<script>!function(){var s=${JSON.stringify(slideHashes)},q=/[?&]ep=(\\d+)/i.exec(location.search),m=/^#ep-(\\d+)$/i.exec(location.hash),n=Number((q&&q[1])||(m&&m[1])||0),id=n>=1&&n<=${total}?String(n):"1",b="/bernstein-ypc/";if(s[id]){var l=document.createElement("link");l.rel="preload";l.as="image";l.href=b+"static/"+s[id]+"/1.webp";l.fetchPriority="high";document.head.appendChild(l);}}();</script>`;
       return html.replace("<!--__LCP_PRELOAD__-->", inlineScript);
     },
   };
