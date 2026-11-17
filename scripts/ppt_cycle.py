@@ -132,6 +132,26 @@ def pace_cli():
     _LAST_CLI_TS = time.monotonic()
 
 
+def run_nlm_cmd(args: list[str], profile: str, timeout: int = 120) -> str:
+    """Execute nlm via non-retrying nlm_once.py wrapper and return raw stdout."""
+    pace_cli()
+    cmd = [str(NLM_PY), str(NLM_ONCE), *args]
+    if "--profile" not in cmd:
+        cmd.extend(["--profile", profile])
+    res = subprocess.run(
+        cmd,
+        cwd=str(ROOT),
+        env=build_base_env(profile),
+        capture_output=True,
+        text=True,
+        timeout=timeout,
+    )
+    if res.returncode != 0:
+        err = (res.stderr or res.stdout or "").strip()
+        raise RuntimeError(f"nlm {' '.join(args[:2])} failed ({res.returncode}): {err}")
+    return (res.stdout or "").strip()
+
+
 def run_nlm_json(args: list[str], profile: str, timeout: int = 120):
     """Execute nlm via non-retrying nlm_once.py wrapper and parse JSON."""
     pace_cli()
@@ -581,7 +601,7 @@ def poll_ready_notebooks(reconcile_now: bool = False) -> tuple[int, bool]:
                     fid = fa.get("artifact_id") or fa.get("id")
                     if fid:
                         try:
-                            run_nlm_json(["studio", "delete", nb_id, fid, "-y"], profile)
+                            run_nlm_cmd(["studio", "delete", nb_id, fid, "-y"], profile)
                             log(f"Purged dead artifact {fid} from {bkey}")
                         except Exception as purge_err:
                             log(f"Warning: failed to purge dead artifact {fid}: {purge_err}")
