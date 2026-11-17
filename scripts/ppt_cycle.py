@@ -323,11 +323,12 @@ def ensure_source(ep_id: int, source_cache: dict) -> tuple[str, str]:
     bkey = rec["bucket"]
     profile = rec["profile"]
     nb_id = ensure_notebook(bkey)
-    if rec.get("source_id"):
-        return nb_id, rec["source_id"]
-
     prefix = f"ep-{ep_id:02d}｜"
     items = list_sources_cached(nb_id, profile, source_cache)
+    tracked_sid = rec.get("source_id")
+    if tracked_sid and any((s.get("source_id") or s.get("id")) == tracked_sid for s in items):
+        return nb_id, tracked_sid
+
     found = next((s for s in items if str(s.get("title", "")).startswith(prefix)), None)
     if not found:
         src_file = ROOT / rec["source_file"]
