@@ -48,6 +48,7 @@ INITIAL_WAIT_SECONDS = 1200
 POLL_INTERVAL_SECONDS = 300
 CLI_INTERVAL_SECONDS = 15
 SINGLE_EP_RETRY_DELAY = 120
+ACCOUNT_REST_AFTER_FAIL = 180
 DAILY_FAIL_LIMIT = 10
 SHORT_THROTTLE_SECONDS = 180
 LONG_COOLDOWN_SECONDS = 18000
@@ -595,6 +596,11 @@ def poll_ready_notebooks(reconcile_now: bool = False) -> tuple[int, bool]:
                     r["failed_today"] += 1
                     r["next_attempt_at"] = (now_dt() + dt.timedelta(seconds=SINGLE_EP_RETRY_DELAY)).isoformat(timespec="seconds")
                     r["history"].append({"at": now_iso(), "event": "failed", "reason": "remote_failed" if failed else "missing_remote_artifact"})
+                    rest_dt = now_dt() + dt.timedelta(seconds=ACCOUNT_REST_AFTER_FAIL)
+                    acct = s["accounts"].setdefault(profile, {})
+                    cur_cool = parse_iso(acct.get("cooldown_until"))
+                    if cur_cool is None or cur_cool < rest_dt:
+                        acct["cooldown_until"] = rest_dt.isoformat(timespec="seconds")
 
                 with_state_lock(_mark_failed)
                 for fa in failed:
@@ -605,7 +611,7 @@ def poll_ready_notebooks(reconcile_now: bool = False) -> tuple[int, bool]:
                             log(f"Purged dead artifact {fid} from {bkey}")
                         except Exception as purge_err:
                             log(f"Warning: failed to purge dead artifact {fid}: {purge_err}")
-                log(f"Marked ep-{ep_id:02d} failed for safe retry (+60s)")
+                log(f"Marked ep-{ep_id:02d} failed; account {profile} resting {ACCOUNT_REST_AFTER_FAIL}s before next submission")
 
     return built, False
 
