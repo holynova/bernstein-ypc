@@ -853,7 +853,44 @@ def main():
                 if r["slide_status"] in {"submitting", "queued", "generating", "running", "in_progress"}
             ]
             if not inflight:
-                break
+                if total_submitted >= args.limit:
+                    break
+                unsubmitted = [
+                    r for r in state["episodes"].values()
+                    if r["slide_status"] in {"pending", "failed", "retry_pending"}
+                    and r.get("failed_today", 0) < DAILY_FAIL_LIMIT
+                ]
+                if not unsubmitted:
+                    break
+                now = now_dt()
+                earliest_ready = None
+                for r in unsubmitted:
+                    profile = r["profile"]
+                    acct_cool = parse_iso(state["accounts"].get(profile, {}).get("cooldown_until"))
+                    ep_next = parse_iso(r.get("next_attempt_at"))
+                    t = now
+                    if acct_cool and acct_cool > t:
+                        t = acct_cool
+                    if ep_next and ep_next > t:
+                        t = ep_next
+                    if earliest_ready is None or t < earliest_ready:
+                        earliest_ready = t
+
+                delay = (earliest_ready - now).total_seconds() if earliest_ready else 0
+                if delay > 900:
+                    log(f"All eligible accounts in long cooldown ({int(delay)}s); ending cycle early.")
+                    break
+                wait_sec = max(30.0, min(max(30.0, delay), deadline - time.monotonic()))
+                if wait_sec <= 5:
+                    break
+                log(f"No active inflight tasks; waiting {int(wait_sec)}s for short throttle/cooldown to clear...")
+                time.sleep(wait_sec)
+                if sibling_lock_held():
+                    log("Sibling podcast-atlas became active during wait; yielding cleanly.")
+                    break
+                sub, _ = submit_eligible(episodes_by_id, args.limit, args.limit - total_submitted, source_cache)
+                total_submitted += sub
+                continue
 
             now = now_dt()
             next_wake = now + dt.timedelta(seconds=POLL_INTERVAL_SECONDS)
