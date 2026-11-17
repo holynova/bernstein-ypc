@@ -558,7 +558,7 @@ def poll_ready_notebooks(reconcile_now: bool = False) -> tuple[int, bool]:
                 with_state_lock(_keep_waiting)
                 continue
 
-            if failed or rec["slide_status"] == "submitting":
+            if failed or not active:
                 def _mark_failed(s):
                     r = s["episodes"][str(ep_id)]
                     today = now_dt().strftime("%Y-%m-%d")
@@ -573,9 +573,17 @@ def poll_ready_notebooks(reconcile_now: bool = False) -> tuple[int, bool]:
                     r["slide_status"] = "failed"
                     r["failed_today"] += 1
                     r["next_attempt_at"] = (now_dt() + dt.timedelta(seconds=SINGLE_EP_RETRY_DELAY)).isoformat(timespec="seconds")
-                    r["history"].append({"at": now_iso(), "event": "failed", "reason": "remote_failed" if failed else "missing_submitting_artifact"})
+                    r["history"].append({"at": now_iso(), "event": "failed", "reason": "remote_failed" if failed else "missing_remote_artifact"})
 
                 with_state_lock(_mark_failed)
+                for fa in failed:
+                    fid = fa.get("artifact_id") or fa.get("id")
+                    if fid:
+                        try:
+                            run_nlm_json(["studio", "delete", nb_id, fid, "-y"], profile)
+                            log(f"Purged dead artifact {fid} from {bkey}")
+                        except Exception as purge_err:
+                            log(f"Warning: failed to purge dead artifact {fid}: {purge_err}")
                 log(f"Marked ep-{ep_id:02d} failed for safe retry (+60s)")
 
     return built, False
