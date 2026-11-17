@@ -533,7 +533,11 @@ def poll_ready_notebooks(reconcile_now: bool = False) -> tuple[int, bool]:
             return built, True
 
         log(f"Polling studio status for {bkey} ({profile}, {len(ready_to_check)} due)")
-        artifacts = fetch_artifacts(nb_id, profile)
+        try:
+            artifacts = fetch_artifacts(nb_id, profile)
+        except Exception as exc:
+            log(f"Warning: transient studio status error on {bkey} ({profile}): {exc}")
+            continue
 
         def _touch_poll(s):
             s["notebooks"][bkey]["last_polled_at"] = now_iso()
