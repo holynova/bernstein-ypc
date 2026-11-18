@@ -183,7 +183,7 @@ def build_deck(args):
 
 def main(root_arg: str | None = None):
     root = pathlib.Path(root_arg) if root_arg else pathlib.Path(__file__).resolve().parents[1]
-    slides_dir = root / "public/slides"
+    slides_dir = root / "work/slides"
     public_static = root / "public/static"
     out_json = root / "src/data/slides.json"
     cache = root / "work/site-slides"
@@ -191,7 +191,9 @@ def main(root_arg: str | None = None):
     cache.mkdir(parents=True, exist_ok=True)
     public_static.mkdir(parents=True, exist_ok=True)
 
-    pdfs = sorted(slides_dir.glob("ep-*.pdf"))
+    pdfs = sorted(p for p in slides_dir.glob("ep-*.pdf") if not p.name.endswith("-uncompressed.pdf"))
+    if not pdfs:
+        pdfs = sorted(slides_dir.glob("ep-*-uncompressed.pdf"))
     if not pdfs:
         out_json.write_text("{}\n", encoding="utf-8")
         print("Built 0 slide decks.")
@@ -228,7 +230,7 @@ def main(root_arg: str | None = None):
         encoding="utf-8",
     )
 
-    public_map = {k: {"prefix": v["prefix"], "pdfUrl": v["pdfUrl"], "pages": v["pages"]} for k, v in sorted(results.items(), key=lambda x: int(x[0]))}
+    public_map = {k: {"prefix": v["prefix"], "pages": v["pages"]} for k, v in sorted(results.items(), key=lambda x: int(x[0]))}
     out_json.write_text(json.dumps(public_map, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(f"Built {len(public_map)} WebP slide decks -> {out_json}")
 

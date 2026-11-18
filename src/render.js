@@ -107,6 +107,7 @@ function renderSlideStrip(ep, slide) {
           width="1376"
           height="768"
           alt="第 ${ep.id} 集《${esc(ep.titleZh)}》图解幻灯片第 1 页"
+          draggable="false"
           fetchpriority="high"
           decoding="async"
         />
@@ -300,7 +301,7 @@ export function renderSlideViewerShell() {
         <button type="button" class="slide-zone is-prev" data-slide-dir="-1" aria-label="上一页">
           <span class="slide-arrow" aria-hidden="true">‹</span>
         </button>
-        <img id="slide-img" class="slide-img" width="1376" height="768" alt="" decoding="async" />
+        <img id="slide-img" class="slide-img" width="1376" height="768" alt="" draggable="false" decoding="async" />
         <span class="slide-loading-pill" id="slide-loading-pill" hidden>加载中…</span>
         <button type="button" class="slide-zone is-next" data-slide-dir="1" aria-label="下一页">
           <span class="slide-arrow" aria-hidden="true">›</span>

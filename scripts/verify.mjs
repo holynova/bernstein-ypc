@@ -72,14 +72,21 @@ for (const [epKey, meta] of Object.entries(slidesMap)) {
     }
   }
   if (meta.pdfUrl) {
-    const pdfRel = String(meta.pdfUrl).replace(/^\/bernstein-ypc\//, "");
-    const pdfDisk = path.join(root, "public", pdfRel);
-    if (!fs.existsSync(pdfDisk) || fs.statSync(pdfDisk).size < 1024) {
-      throw new Error(`Missing or empty downloadable PDF: ${pdfDisk}`);
-    }
+    throw new Error(`Forbidden pdfUrl exposed in slides.json for episode ${epKey}: ${meta.pdfUrl}`);
   }
   slideDeckCount++;
   slidePageCount += meta.pages;
+}
+
+if (/\bdownload\b/i.test(renderSrc) || /下载/.test(renderSrc)) {
+  throw new Error("Download UI or attribute found in src/render.js; online viewing only!");
+}
+if (!renderSrc.includes('class="slide-cover-img"') || !renderSrc.includes('draggable="false"')) {
+  throw new Error("Slide images must set draggable=\"false\"");
+}
+const cssSrc = fs.readFileSync(path.join(root, "src/styles/proto-c.css"), "utf8");
+if (!cssSrc.includes("-webkit-touch-callout: none") || !cssSrc.includes("pointer-events: none")) {
+  throw new Error("Slide CSS missing anti-save protection");
 }
 
 if (fs.existsSync(distIndex)) {
@@ -88,9 +95,9 @@ if (fs.existsSync(distIndex)) {
     throw new Error("Built dist/index.html missing app mount point");
   }
   const distDir = path.join(root, "dist");
-  for (const forbidden of ["work", "state", "logs", "sources"]) {
+  for (const forbidden of ["work", "state", "logs", "sources", "slides"]) {
     if (fs.existsSync(path.join(distDir, forbidden))) {
-      throw new Error(`Forbidden internal directory leaked into dist/: ${forbidden}`);
+      throw new Error(`Forbidden internal or download directory leaked into dist/: ${forbidden}`);
     }
   }
 }

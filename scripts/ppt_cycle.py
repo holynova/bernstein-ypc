@@ -781,13 +781,13 @@ def publish_site():
     count = len(slides)
 
     status = subprocess.check_output(
-        ["git", "status", "--porcelain", "--", "src/data/slides.json", "public/static", "public/slides"],
+        ["git", "status", "--porcelain", "--", "src/data/slides.json", "public/static"],
         cwd=str(ROOT),
         env=env,
         text=True,
     ).strip()
     if status:
-        subprocess.run(["git", "add", "--", "src/data/slides.json", "public/static", "public/slides"], cwd=str(ROOT), env=env, check=True)
+        subprocess.run(["git", "add", "--", "src/data/slides.json", "public/static"], cwd=str(ROOT), env=env, check=True)
         diff_cached = subprocess.run(["git", "diff", "--cached", "--quiet"], cwd=str(ROOT), env=env)
         if diff_cached.returncode != 0:
             subprocess.run(["git", "commit", "-m", f"Publish WebP PPT slides ({count}/53 episodes)"], cwd=str(ROOT), env=env, check=True)

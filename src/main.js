@@ -759,8 +759,24 @@ window.addEventListener("hashchange", () => {
 
 document.addEventListener("fullscreenchange", syncSlideFullscreenLabel);
 
+app.addEventListener("contextmenu", (e) => {
+  if (e.target.closest(".slide-strip, .slide-viewer")) {
+    e.preventDefault();
+  }
+});
+
+app.addEventListener("dragstart", (e) => {
+  if (e.target.closest(".slide-strip, .slide-viewer") || e.target.tagName === "IMG") {
+    e.preventDefault();
+  }
+});
+
 window.addEventListener("keydown", (e) => {
   if (slideViewerState.open) {
+    if ((e.metaKey || e.ctrlKey) && (e.key.toLowerCase() === "s" || e.key.toLowerCase() === "p")) {
+      e.preventDefault();
+      return;
+    }
     const viewer = document.getElementById("slide-viewer");
     if (e.key === "Escape") {
       e.preventDefault();
