@@ -28,7 +28,7 @@ A study guide to all 53 episodes of Leonard Bernstein's *Young People's Concerts
 - **4 categories**: 基础乐理 music fundamentals (19), 大师与杰作 masters & masterpieces (14), 文化与跨界 culture & crossover (10), 青年专场 young artists (10).
 - **Bilibili videos**: 48 episodes link to Chinese-subtitled videos by 掘火档案 (a Bilibili collection); every episode also links to the original English lecture script on leonardbernstein.com.
 - **Repertoire**: 262 performed pieces in total, 146 with Apple Music audio previews, in a collapsible track list you can listen through one by one.
-- **Illustrated slide decks**: 47 decks, 15 pages each (705 pages total), readable in-page or fullscreen, with PDF versions; episodes 1, 9, 11, 22, 30, 37 have no deck yet.
+- **Illustrated slide decks**: all 53 decks, 15 pages each (795 pages total), readable in-page or fullscreen online only (no downloads).
 
 ## Features
 
@@ -58,9 +58,8 @@ npm test
 ```
 src/data/episodes.json    All 53 episodes: theses, explainers, scenes, videos, tracks
 src/data/index.json       Episode index (for the table of contents / search)
-src/data/slides.json      47 slide-deck mappings (15 pages each)
-public/slides/            47 slide-deck PDFs
-public/static/            705 slide images (webp)
+src/data/slides.json      53 slide-deck mappings (15 pages each, online viewing only)
+public/static/            795 slide images (webp)
 src/main.js / render.js   UI logic and rendering (including the slide reader)
 src/audio.js              Audio preview playback
 ```
