@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="1200" height="360" viewBox="0 0 1200 360"
+     role="img" aria-labelledby="title desc">
+  <title id="title">伯恩斯坦《青少年音乐会》— 全 53 课精读指南</title>
+  <desc id="desc">暖纸底编辑风标题：伯恩斯坦《青少年音乐会》，副标题全 53 课精读指南；右侧是五线谱与彩色音符，指挥棒斜贯其间，红圈里写着 53。</desc>
+
+  <rect width="1200" height="360" rx="26" fill="#faf7f0"/>
+
+  <g id="title-block" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif">
+    <text x="56" y="62" font-size="19" letter-spacing="3" fill="#8c2d23">YOUNG PEOPLE'S CONCERTS · 1958–1972</text>
+    <text x="56" y="128" font-size="56" font-weight="700" fill="#1c1917">伯恩斯坦《青少年音乐会》</text>
+    <text x="56" y="168" font-size="23" fill="#44403c">全 53 课精读指南 — 核心观点、现场演示与试听曲目</text>
+    <text x="56" y="204" font-size="19" fill="#66605a">B 站掘火中译视频 · 262 首曲目 · 47 套图解幻灯片</text>
+    <g id="chips" font-size="18" fill="#1c1917" text-anchor="middle">
+      <g><rect x="56" y="238" width="126" height="36" rx="18" fill="#ffffff" stroke="#d6d3d1" stroke-width="1.5"/><text x="119" y="262">53 课全收录</text></g>
+      <g><rect x="194" y="238" width="144" height="36" rx="18" fill="#ffffff" stroke="#d6d3d1" stroke-width="1.5"/><text x="266" y="262">48 集 B 站中译</text></g>
+      <g><rect x="350" y="238" width="126" height="36" rx="18" fill="#ffffff" stroke="#d6d3d1" stroke-width="1.5"/><text x="413" y="262">262 首曲目</text></g>
+      <g><rect x="488" y="238" width="132" height="36" rx="18" fill="#ffffff" stroke="#d6d3d1" stroke-width="1.5"/><text x="554" y="262">47 套幻灯片</text></g>
+    </g>
+  </g>
+
+  <g id="staff-motif">
+    <g id="staff-lines" stroke="#d6d3d1" stroke-width="2">
+      <line x1="800" y1="120" x2="1144" y2="120"/>
+      <line x1="800" y1="140" x2="1144" y2="140"/>
+      <line x1="800" y1="160" x2="1144" y2="160"/>
+      <line x1="800" y1="180" x2="1144" y2="180"/>
+      <line x1="800" y1="200" x2="1144" y2="200"/>
+    </g>
+    <g id="notes">
+      <g transform="translate(840 168) rotate(-18)"><ellipse rx="13" ry="9" fill="#8c2d23"/><rect x="10" y="-52" width="3.5" height="52" fill="#8c2d23"/></g>
+      <g transform="translate(920 148) rotate(-18)"><ellipse rx="13" ry="9" fill="#b45309"/><rect x="10" y="-52" width="3.5" height="52" fill="#b45309"/></g>
+      <g transform="translate(1000 188) rotate(-18)"><ellipse rx="13" ry="9" fill="#0e7490"/><rect x="10" y="-52" width="3.5" height="52" fill="#0e7490"/></g>
+      <g transform="translate(1080 138) rotate(-18)"><ellipse rx="13" ry="9" fill="#4d7c0f"/><rect x="10" y="-52" width="3.5" height="52" fill="#4d7c0f"/></g>
+    </g>
+    <g id="baton" transform="rotate(28 972 250)">
+      <rect x="968" y="150" width="7" height="150" rx="3.5" fill="#1c1917"/>
+      <circle cx="971" cy="308" r="10" fill="#8c2d23"/>
+    </g>
+    <g id="badge53" font-family="Georgia, 'Times New Roman', serif">
+      <circle cx="1072" cy="282" r="42" fill="none" stroke="#8c2d23" stroke-width="3"/>
+      <text x="1072" y="297" font-size="36" font-weight="700" fill="#8c2d23" text-anchor="middle">53</text>
+    </g>
+    <text x="800" y="72" font-size="18" fill="#8c2d23" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif">指挥棒一点，音乐就有了含义</text>
+  </g>
+</svg>
